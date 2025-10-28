@@ -4,7 +4,7 @@
 
     {% set has_filters = request.args.get('brand') or request.args.get('type') or request.args.get('min') or request.args.get('max') %}
 
-    <form id="filterForm" class="row g-2 mb-3" method="get">
+    <form id="filterForm" class="row g-2 mb-3 py-2" method="get">
         <div class="col-md-3">
             <input id="brand" class="form-control" name="brand" placeholder="Brand"
                    value="{{ request.args.get('brand','') }}"/>

@@ -1,0 +1,52 @@
+<section class="d-flex justify-content-center align-items-center py-2">
+    <div class="card shadow-sm border-0 text-center p-5" style="max-width: 640px;">
+        <div class="display-4 mb-3">
+            {% if role == 'corporate' %}🏢{% else %}🚗{% endif %}
+        </div>
+        <h4 class="mb-2">
+            {% if role == 'corporate' %}
+                No corporate rentals yet
+            {% else %}
+                No rentals yet
+            {% endif %}
+        </h4>
+        <p class="text-muted mb-4">
+            {% if role == 'corporate' %}
+                You haven’t booked any vehicles with your corporate account yet.
+                Browse our catalogue and enjoy your 15% discount.
+            {% else %}
+                You don’t have any rentals right now. Browse vehicles and start your first booking.
+            {% endif %}
+        </p>
+        <div class="d-flex justify-content-center">
+            <a href="/vehicles" class="btn btn-primary me-2">Browse Vehicles</a>
+        </div>
+
+        {% if suggestions %}
+            <hr class="my-4">
+            <div class="text-muted mb-3">Popular right now</div>
+            <div class="row gx-3 gy-3">
+                {% for v in suggestions[:3] %}
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <a class="btn btn-sm no-style" href="/vehicles/{{ v.vehicle_id }}">
+                                <img src="{{ v.image_path }}" class="card-img-top"
+                                     alt="{{ v.brand }} {{ v.model }}">
+                            </a>
+                            <div class="card-body p-3 text-start">
+                                <div class="fw-semibold small mb-1">{{ v.brand }} {{ v.model }}</div>
+                                <div class="text-muted small">
+                                    Type: {{ v.type }} · ${{ '%.2f'|format(v.rate) }}/day
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mt-4 small text-muted">
+            Tip: filter by brand, type and price on the Vehicles page to find a match faster.
+        </div>
+    </div>
+</section>

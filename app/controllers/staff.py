@@ -48,7 +48,7 @@ PLACEHOLDER = "/static/images/placeholder.png"
 
 
 @bp.get("/users")
-def users():
+def staff_users():
     store = Service._store()
     users = list(store.users.values())
     return render_template("staff_users.html", users=users)
@@ -174,7 +174,7 @@ def staff_add_user():
 
 @bp.get("/analytics")
 def staff_analytics():
-    """Staff dashboard: system analytics summary."""
+    """Staff dashboards: system analytics summary."""
     data = Service.analytics()
     return render_template("staff_analytics.html", data=data)
 
@@ -591,7 +591,7 @@ class Service:
     @staticmethod
     def analytics():
         """
-        Provide rich analytics for staff dashboard:
+        Provide rich analytics for staff dashboards:
           - totals
           - rentals per vehicle (top-down)
           - revenue by start_date

@@ -87,7 +87,7 @@ def invoice(rid):
 @bp.post("/return")
 @login_required
 def return_submit():
-    """Handle vehicle return from dashboard form."""
+    """Handle vehicle return from dashboards form."""
     rid = (request.form.get("rental_id") or "").strip()
     if not rid:
         flash("Missing rental id", "danger")

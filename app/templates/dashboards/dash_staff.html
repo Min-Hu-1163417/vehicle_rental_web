@@ -1,0 +1,40 @@
+{% extends "dashboards/dashboard_base.html" %}
+{% set title = "Staff Dashboard" %}
+{% set subtitle = "Manage users, vehicles, and system analytics" %}
+
+{% block dashboard_content %}
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-1 mb-3 text-dark">🧑‍💼</div>
+                    <h5 class="card-title fw-semibold">Manage Users</h5>
+                    <p class="text-muted small">Add or delete Individual / Corporate users</p>
+                    <a href="{{ url_for('staff.staff_users') }}" class="btn btn-outline-dark w-100">Go</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-1 mb-3 text-dark">🚗</div>
+                    <h5 class="card-title fw-semibold">Manage Vehicles</h5>
+                    <p class="text-muted small">Add, edit or remove vehicles</p>
+                    <a href="{{ url_for('staff.staff_vehicles') }}" class="btn btn-outline-dark w-100">Go</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-1 mb-3 text-dark">📊</div>
+                    <h5 class="card-title fw-semibold">Analytics</h5>
+                    <p class="text-muted small">View rentals summary and statistics</p>
+                    <a href="{{ url_for('staff.staff_analytics') }}" class="btn btn-outline-dark w-100">Go</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

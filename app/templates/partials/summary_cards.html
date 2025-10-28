@@ -1,0 +1,31 @@
+{# --- Corporate Summary Cards --- #}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="fs-6 text-muted">Total Rentals</div>
+                <div class="fw-bold fs-4 text-primary mt-1">{{ rentals|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="fs-6 text-muted">Total Spent</div>
+                <div class="fw-bold fs-4 text-success mt-1">
+                    ${{ "%.2f"|format(rentals | sum(attribute='total')) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="fs-6 text-muted">Corporate Discount</div>
+                <div class="fw-bold fs-4 text-info mt-1">15%</div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,11 @@
+{% extends "dashboards/dashboard_base.html" %}
+{% set title = "Individual Dashboard" %}
+{% set subtitle = "Your recent rentals and personal activity" %}
+
+{% block dashboard_content %}
+    {% if rentals %}
+        {% include "partials/rental_table.html" %}
+    {% else %}
+        {% include "partials/empty_state.html" %}
+    {% endif %}
+{% endblock %}

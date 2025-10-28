@@ -1,0 +1,12 @@
+{% extends "dashboards/dashboard_base.html" %}
+{% set title = "Corporate Dashboard" %}
+{% set subtitle = "Company-wide rentals and discount summary" %}
+
+{% block dashboard_content %}
+    {% if rentals %}
+        {% include "partials/summary_cards.html" %}
+        {% include "partials/rental_table.html" %}
+    {% else %}
+        {% include "partials/empty_state.html" %}
+    {% endif %}
+{% endblock %}

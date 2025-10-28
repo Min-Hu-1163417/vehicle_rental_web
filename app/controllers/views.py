@@ -33,7 +33,8 @@ def individual_dashboard():
         return redirect(url_for("auth.login"))
     rentals = Service.rentals_for_user(uid)
 
-    return render_template("dashboard/dash_individual.html", rentals=rentals, current_date=date.today().strftime("%Y-%m-%d"))
+    return render_template("dashboards/dash_individual.html", rentals=rentals,
+                           current_date=date.today().strftime("%Y-%m-%d"))
 
 
 @bp.get("/dashboard/corporate")
@@ -42,7 +43,7 @@ def individual_dashboard():
 def corporate_dashboard():
     Service.refresh_overdue_flags()
 
-    return render_template("dashboard/dash_corporate.html")
+    return render_template("dashboards/dash_corporate.html")
 
 
 @bp.get("/dashboard/staff")
@@ -51,4 +52,4 @@ def corporate_dashboard():
 def staff_dashboard():
     Service.refresh_overdue_flags()
 
-    return render_template("dashboard/dash_staff.html")
+    return render_template("dashboards/dash_staff.html")
