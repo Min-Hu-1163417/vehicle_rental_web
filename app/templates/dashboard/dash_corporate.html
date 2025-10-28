@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+    <h3>Corporate Dashboard</h3>
+    <p class="text-muted mb-4">Your company rentals and discount summary</p>
+
+    {% if rentals %}
+        {# --- Summary cards --- #}
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="fs-5 text-muted">Total Rentals</div>
+                        <div class="fw-bold fs-4 text-primary">{{ rentals|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="fs-5 text-muted">Total Spent</div>
+                        <div class="fw-bold fs-4 text-success">
+                            ${{ "%.2f"|format(rentals | sum(attribute='total')) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="fs-5 text-muted">Corporate Discount</div>
+                        <div class="fw-bold fs-4 text-info">15%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# --- Rentals table --- #}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Vehicle</th>
+                    <th>Type</th>
+                    <th>Period</th>
+                    <th class="text-end">Days</th>
+                    <th class="text-end">Rate / day</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Total</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in rentals %}
+                    {% set today = current_date or "" %}
+                    {% set can_return = (r.status in ['rented','overdue'] and r.start_date <= today) %}
+                    {% set can_invoice = (r.status == 'returned') %}
+                    <tr>
+                        <td>{{ r.brand }} {{ r.model }}</td>
+                        <td>{{ r.type }}</td>
+                        <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                        <td class="text-end">{{ r.days }}</td>
+                        <td class="text-end">${{ '%.2f'|format(r.rate) }}</td>
+                        <td class="text-end">
+                            {% if r.discount %}
+                                {{ (r.discount * 100)|round(0) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </td>
+                        <td class="text-end">${{ '%.2f'|format(r.total) }}</td>
+                        <td>
+              <span class="badge
+                {% if r.status=='rented' %} text-bg-primary
+                {% elif r.status=='overdue' %} text-bg-danger
+                {% elif r.status=='returned' %} text-bg-success
+                {% elif r.status=='cancelled' %} text-bg-secondary
+                {% else %} text-bg-light
+                {% endif %}">
+                {{ r.status }}
+              </span>
+                        </td>
+                        <td>
+                            {% if can_return %}
+                                <form method="post" action="/return" class="d-inline">
+                                    <input type="hidden" name="rental_id" value="{{ r.rental_id }}">
+                                    <button class="btn btn-sm {% if r.status == 'overdue' %}btn-danger{% else %}btn-outline-warning{% endif %}">
+                                        Return
+                                    </button>
+                                </form>
+                            {% endif %}
+                            {% if can_invoice %}
+                                <a href="/invoice/{{ r.rental_id }}" class="btn btn-sm btn-outline-primary">Invoice</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="d-flex justify-content-center align-items-center py-2">
+            <div class="card shadow-sm border-0 text-center p-5" style="max-width: 540px;">
+                <div class="display-4 mb-3">🏢</div>
+                <h4 class="mb-2">No corporate rentals yet</h4>
+                <p class="text-muted mb-4">
+                    You haven’t booked any vehicles with your corporate account.
+                    Browse our catalogue and enjoy a 15% discount automatically applied.
+                </p>
+                <a href="/vehicles" class="btn btn-primary btn-lg">Browse vehicles</a>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
