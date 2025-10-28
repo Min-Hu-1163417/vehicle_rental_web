@@ -57,10 +57,21 @@ class Service:
         if brand:
             res = [v for v in res if v.get("brand") == brand]
 
-        if min_rate:
-            res = [v for v in res if v.get("rate", 0) >= float(min_rate)]
-        if max_rate:
-            res = [v for v in res if v.get("rate", 0) <= float(max_rate)]
+        # Safe numeric conversion helper
+        def _to_float_safe(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        min_val = _to_float_safe(min_rate)
+        max_val = _to_float_safe(max_rate)
+
+        if min_val is not None:
+            res = [v for v in res if v.get("rate", 0) >= min_val]
+        if max_val is not None:
+            res = [v for v in res if v.get("rate", 0) <= max_val]
+
         return res
 
     @staticmethod

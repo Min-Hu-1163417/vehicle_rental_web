@@ -48,7 +48,7 @@
                               {% elif r.status=='cancelled' %} text-bg-secondary
                               {% else %} text-bg-light
                               {% endif %}">
-                                {{ v.status | default('available', true) }}
+                                {{ r.status | default('available', true) }}
                             </span>
                             {% if r.status == 'overdue' and r.overdue_days %}
                                 <small class="text-danger ms-1">
@@ -88,6 +88,44 @@
             </table>
         </div>
     {% else %}
-        <div class="text-muted">No rentals yet.</div>
+        {# Pretty empty state #}
+        <section class="d-flex justify-content-center align-items-center py-2">
+            <div class="card shadow-sm border-0 text-center p-5" style="max-width: 640px;">
+                <div class="display-4 mb-3">🚗</div>
+                <h4 class="mb-2">No rentals yet</h4>
+                <p class="text-muted mb-4">
+                    You don’t have any rentals right now. Browse vehicles and start your first booking.
+                </p>
+                <div class="d-flex justify-content-center">
+                    <a href="/vehicles" class="btn btn-primary btn-lg">Browse vehicles</a>
+                </div>
+
+                {# Optional: show suggestions if provided from the view (list of vehicles) #}
+                {% if suggestions %}
+                    <hr class="my-4">
+                    <div class="text-muted mb-3">Popular right now</div>
+                    <div class="row gx-3 gy-3">
+                        {% for v in suggestions[:3] %}
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <a class="btn btn-sm no-style" href="/vehicles/{{ v.vehicle_id }}">
+                                        <img src="{{ v.image_path }}" class="card-img-top"
+                                             alt="{{ v.brand }} {{ v.model }}">
+                                    </a>
+                                    <div class="card-body p-3 text-start">
+                                        <div class="fw-semibold small mb-1">{{ v.brand }} {{ v.model }}</div>
+                                        <div class="text-muted small">Type: {{ v.type }} · ${{ '%.2f'|format(v.rate) }}/day</div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="mt-4 small text-muted">
+                    Tip: filter by brand, type and price on the Vehicles page to find a match faster.
+                </div>
+            </div>
+        </section>
     {% endif %}
 {% endblock %}

@@ -9,8 +9,8 @@ def main():
         store = Store.instance()
         # Set admin password to 'admin123'
         for u in store.users.values():
-            if u.get("username") == "admin":
-                u["password_hash"] = generate_hash("admin123")
+            if u.get("username") == "staff":
+                u["password_hash"] = generate_hash("Staff123")
                 break
         # Add demo vehicles if none
         if not store.vehicles:
@@ -23,7 +23,7 @@ def main():
             store.create_vehicle({"brand": "Isuzu", "model": "N-Series", "type": "truck", "rate": 95,
                                   "image_path": "/static/images/isuzu.jpg", 'status': 'available'})
         store.save()
-        print("Seed complete. Admin login: admin / admin123")
+        print("Seed complete. Staff login: staff / Staff123")
 
 
 if __name__ == "__main__":

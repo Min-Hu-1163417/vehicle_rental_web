@@ -1,11 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
     <h3>Vehicles</h3>
-    <form class="row g-2 mb-3" method="get">
-        <div class="col-md-3"><input class="form-control" name="brand" placeholder="Brand"
-                                     value="{{ request.args.get('brand','') }}"/></div>
+
+    {% set has_filters = request.args.get('brand') or request.args.get('type') or request.args.get('min') or request.args.get('max') %}
+
+    <form id="filterForm" class="row g-2 mb-3" method="get">
         <div class="col-md-3">
-            <select class="form-select" name="type">
+            <input id="brand" class="form-control" name="brand" placeholder="Brand"
+                   value="{{ request.args.get('brand','') }}"/>
+        </div>
+
+        <div class="col-md-3">
+            <select id="type" class="form-select" name="type">
                 {% set t = request.args.get('type','') %}
                 <option value="" {{ 'selected' if t=='' else '' }}>All types</option>
                 <option value="car" {{ 'selected' if t=='car' else '' }}>car</option>
@@ -14,28 +20,78 @@
             </select>
         </div>
 
-        <div class="col-md-2"><input class="form-control" name="min" placeholder="Min rate"
-                                     value="{{ request.args.get('min','') }}"/></div>
-        <div class="col-md-2"><input class="form-control" name="max" placeholder="Max rate"
-                                     value="{{ request.args.get('max','') }}"/></div>
         <div class="col-md-2">
+            <input id="min" class="form-control" name="min" placeholder="Min rate"
+                   value="{{ request.args.get('min','') }}"/>
+        </div>
+
+        <div class="col-md-2">
+            <input id="max" class="form-control" name="max" placeholder="Max rate"
+                   value="{{ request.args.get('max','') }}"/>
+        </div>
+
+        <div class="col-md-2 d-flex justify-content-end">
+            {# Reset 在 Filter 左边；无过滤条件时隐藏 #}
+            <a id="resetBtn"
+               class="btn btn-outline-secondary me-2 {{ '' if has_filters else 'd-none' }}"
+               href="{{ request.path }}">Reset</a>
             <button class="btn btn-primary w-100">Filter</button>
         </div>
     </form>
-    <div class="row">
-        {% for v in vehicles %}
-            <div class="col-md-4">
-                <div class="card mb-3">
-                    <a class="btn btn-sm no-style" href="/vehicles/{{ v.vehicle_id }}"> <img
-                            src="{{ v.image_path }}" class="card-img-top" alt="vehicle">
-                    </a>
 
-                    <div class="card-body">
-                        <h5 class="card-title">{{ v.brand }} {{ v.model }}</h5>
-                        <p class="card-text">Type: {{ v.type }} | Rate: ${{ '%.2f'|format(v.rate) }}/day</p>
+    <div class="row">
+        {% if vehicles %}
+            {% for v in vehicles %}
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <a class="btn btn-sm no-style" href="/vehicles/{{ v.vehicle_id }}">
+                            <img src="{{ v.image_path }}" class="card-img-top" alt="vehicle">
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ v.brand }} {{ v.model }}</h5>
+                            <p class="card-text">Type: {{ v.type }} | Rate: ${{ '%.2f'|format(v.rate) }}/day</p>
+                        </div>
                     </div>
                 </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 d-flex justify-content-center align-items-center py-5">
+                <div class="card shadow-sm border-0 text-center p-5" style="max-width: 540px;">
+                    <div class="display-4 mb-3">🚗</div>
+                    <h4 class="mb-2">No vehicles found</h4>
+                    {% if has_filters %}
+                        <p class="text-muted mb-4">
+                            No vehicles match your current filters. Try adjusting your search criteria.
+                        </p>
+                        <a href="{{ request.path }}" class="btn btn-outline-primary">Reset filters</a>
+                    {% else %}
+                        <p class="text-muted mb-4">
+                            There are currently no vehicles available.
+                        </p>
+                        <a href="{{ url_for('views.home') }}" class="btn btn-outline-secondary">Back to home</a>
+                    {% endif %}
+                </div>
             </div>
-        {% endfor %}
+        {% endif %}
     </div>
+
+    <script>
+		(function () {
+			const fields = ["brand", "type", "min", "max"].map(id => document.getElementById(id));
+			const resetBtn = document.getElementById("resetBtn");
+
+			function hasAny() {
+				return fields.some(el => el && (el.value || "").trim() !== "");
+			}
+
+			function sync() {
+				if (!resetBtn) return;
+				if (hasAny()) resetBtn.classList.remove("d-none");
+				else resetBtn.classList.add("d-none");
+			}
+
+			fields.forEach(el => el && (el.addEventListener("input", sync), el.addEventListener("change", sync)));
+			sync();
+		})();
+    </script>
 {% endblock %}
