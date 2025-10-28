@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+    <h3>Manage Users</h3>
+
+    <p class="text-muted"><strong>Note:</strong> Staff accounts cannot be created here.
+        They are provisioned out-of-band (seeded admin only). Use <code>admin/admin123</code> after running <code>python
+            seeds.py</code>.</p>
+
+    <form class="row g-2 mb-3" method="post" action="/staff/users/add">
+        <div class="col-md-3"><input class="form-control" name="username" placeholder="username" required/></div>
+        <div class="col-md-3">
+            <select class="form-select" name="role">
+                <option value="individual">individual</option>
+                <option value="corporate">corporate</option>
+            </select>
+        </div>
+        <div class="col-md-3"><input class="form-control" name="password" placeholder="password" required/></div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100">Create</button>
+        </div>
+    </form>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>renter_id</th>
+            <th>username</th>
+            <th>role</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u.renter_id }}</td>
+                <td>{{ u.username }}</td>
+                <td>{{ u.role }}</td>
+                <td>
+                    {% if u.username != 'admin' and u.role != 'staff' %}
+                        <form method="post" action="/staff/users/delete" class="d-inline">
+                            <input type="hidden" name="renter_id" value="{{ u.renter_id }}"/>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    onclick='return confirm({{ ("Are you sure you want to delete user " ~ u.username ~ "? This action cannot be undone.")|tojson }});'>
+                                Delete
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="text-muted small">protected</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

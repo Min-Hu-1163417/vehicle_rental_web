@@ -1,0 +1,69 @@
+/* 全局统一样式 */
+.card-img-top {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+/* 所有页面主内容水平居中 */
+.container {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center; /* 让文字和内部元素默认居中 */
+}
+
+.vehicle-hero {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+/* Staff tab 高亮 */
+.navbar .nav-link.active-nav {
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-bottom: 2px solid #fff;
+    padding-bottom: 0.1rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.navbar .nav-link:hover {
+    color: #ddd !important;
+}
+
+.no-style {
+    border: none !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+/* Keep footer centered; make sure it floats above content */
+.site-footer {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 32px;
+    line-height: 32px;
+    opacity: .7;
+    z-index: 1030;
+    pointer-events: none; /* don't block clicks on content under it */
+}
+
+/* Reserve space at the bottom of every page so footer never overlaps */
+.main-container {
+    padding-bottom: 80px; /* >= footer height + gap */
+}
+
+.chart-box {
+    position: relative;
+    height: 280px;
+}
+
+.chart-box canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+}

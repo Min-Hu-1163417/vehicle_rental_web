@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <title>Vehicle Rental</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>@media print {
+        .no-print {
+            display: none !important;
+        }
+    }</style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">Rental</a>
+        <div class="navbar-nav">
+            {% if session.get("role") == "staff" %}
+                <a class="nav-link {% if request.path.startswith('/dashboard/staff') %}active-nav{% endif %}"
+                   href="/dashboard/staff">Staff</a>
+            {% endif %}
+            {% if session.get("uid") %}
+                <a class="nav-link {% if request.path.startswith('/vehicles') %}active-nav{% endif %}" href="/vehicles">Vehicles</a>
+            {% endif %}
+            {% if session.get("role") == "corporate" %}
+                <a class="nav-link {% if request.path.startswith('/dashboard/corporate') %}active-nav{% endif %}"
+                   href="/dashboard/corporate">Corporate</a>
+            {% endif %}
+            {% if session.get("role") == "individual" %}
+                <a class="nav-link {% if request.path.startswith('/dashboard/individual') %}active-nav{% endif %}"
+                   href="/dashboard/individual">Individual</a>
+            {% endif %}
+        </div>
+        {% if session.get("uid") %}
+            <div class="d-flex align-items-center">
+                <span class="me-2 text-white">Hi, {{ session.get('username') }}</span>
+                <form method="get" action="/logout" class="d-inline">
+                    <input type="hidden">
+                    <button class="btn btn-warning btn-sm"
+                            onclick="return confirm('Are you sure you want to log out?');">
+                        Logout
+                    </button>
+                </form>
+            </div>
+        {% else %}
+            <div class="d-flex">
+                <a class="btn btn-outline-light btn-sm me-2" href="/login">Login</a>
+                <a class="btn btn-success btn-sm me-2" href="/register">Register</a>
+            </div>
+        {% endif %}
+    </div>
+</nav>
+<div class="container py-4 main-container">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-info">{{ messages[0] }}</div>
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</div>
+</body>
+</html>

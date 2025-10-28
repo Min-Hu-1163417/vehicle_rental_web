@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block content %}
+    <h3>Analytics</h3>
+
+    <!-- Stat cards -->
+    <div class="row g-3 mb-4 justify-content-center">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="fw-semibold">Total Users</div>
+                    <div class="display-6">{{ data.totals.users }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="fw-semibold">Total Vehicles</div>
+                    <div class="display-6">{{ data.totals.vehicles }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="fw-semibold">Total Rentals</div>
+                    <div class="display-6">{{ data.totals.rentals }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="fw-semibold">Revenue</div>
+                    <div class="display-6">${{ '%.2f'|format(data.totals.revenue) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4 justify-content-center align-items-stretch">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="mb-3">Rentals by Vehicle</h6>
+                    <div class="chart-box">
+                        <canvas id="rentalsByVehicle"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="mb-3">Revenue by Date</h6>
+                    <div class="chart-box">
+                        <canvas id="revenueByDate"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- bottom donut -->
+    <div class="row g-4 mt-1 justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="mb-3">Users by Role</h6>
+                    <div class="chart-box">
+                        <canvas id="usersByRole"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+		const rentalsByVehicle = {{ (data.rentals_by_vehicle or [])|tojson }};
+		const revenueByDate = {{ (data.revenue_by_date    or [])|tojson }};
+		const usersByRole = {{ (data.users_by_role      or [])|tojson }};
+
+		// single-run guard (prevents double init if template/script is re-inserted)
+		if (!window.__analyticsMounted) {
+			window.__analyticsMounted = true;
+
+			// keep references to destroy safely
+			window.__charts = window.__charts || {};
+
+			function mountChart(id, cfg) {
+				const el = document.getElementById(id);
+				if (!el) return;
+				if (window.__charts[id]) {
+					window.__charts[id].destroy();
+				}
+				window.__charts[id] = new Chart(el.getContext('2d'), cfg);
+			}
+
+			document.addEventListener('DOMContentLoaded', () => {
+				mountChart('rentalsByVehicle', {
+					type: 'bar',
+					data: {
+						labels: rentalsByVehicle.map(x => x.label),
+						datasets: [{ label: 'Rentals', data: rentalsByVehicle.map(x => x.count) }]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: { legend: { position: 'bottom' } },
+						scales: { y: { beginAtZero: true } }
+					}
+				});
+
+				mountChart('revenueByDate', {
+					type: 'line',
+					data: {
+						labels: revenueByDate.map(x => x.date),
+						datasets: [{ label: 'Revenue', data: revenueByDate.map(x => x.total), tension: 0.3 }]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: { legend: { position: 'bottom' } },
+						scales: { y: { beginAtZero: true } }
+					}
+				});
+
+				mountChart('usersByRole', {
+					type: 'doughnut',
+					data: {
+						labels: usersByRole.map(x => x.role),
+						datasets: [{ label: 'Users', data: usersByRole.map(x => x.count) }]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: { legend: { position: 'bottom' } },
+						scales: { y: { beginAtZero: true } }
+					}
+				});
+			});
+		}
+    </script>
+{% endblock %}

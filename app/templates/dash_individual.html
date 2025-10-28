@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+    <h3>Individual Dashboard</h3>
+    <p class="text-muted">Your recent rentals</p>
+
+    {% if rentals %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Vehicle</th>
+                    <th>Type</th>
+                    <th>Period</th>
+                    <th class="text-end">Days</th>
+                    <th class="text-end">Rate / day</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Total</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in rentals %}
+                    {% set today = current_date or "" %}
+                    {% set is_future = (r.start_date > today) %}
+                    {% set can_cancel = (r.status == 'rented' and is_future) %}
+                    {% set can_return = (r.status in ['rented','overdue'] and r.start_date <= today) %}
+                    {% set can_invoice = (r.status == 'returned') %}
+                    <tr>
+                        <td>{{ r.brand }} {{ r.model }}</td>
+                        <td>{{ r.type }}</td>
+                        <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                        <td class="text-end">{{ r.days }}</td>
+                        <td class="text-end">${{ '%.2f'|format(r.rate) }}</td>
+                        <td class="text-end">
+                            {% if r.discount %}
+                                {{ (r.discount * 100)|round(0) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </td>
+                        <td class="text-end">${{ '%.2f'|format(r.total) }}</td>
+                        <td>
+                            <span class="badge
+                              {% if r.status=='rented' %} text-bg-primary
+                              {% elif r.status=='overdue' %} text-bg-danger
+                              {% elif r.status=='returned' %} text-bg-success
+                              {% elif r.status=='cancelled' %} text-bg-secondary
+                              {% else %} text-bg-light
+                              {% endif %}">
+                                {{ v.status | default('available', true) }}
+                            </span>
+                            {% if r.status == 'overdue' and r.overdue_days %}
+                                <small class="text-danger ms-1">
+                                    ({{ r.overdue_days }} day{{ 's' if r.overdue_days|int != 1 }})
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if can_cancel %}
+                                <form method="post" action="/cancel" class="d-inline">
+                                    <input type="hidden" name="rental_id" value="{{ r.rental_id }}">
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Cancel this rental?');">
+                                        Cancel
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {% if can_return %}
+                                <form method="post" action="/return" class="d-inline">
+                                    <input type="hidden" name="rental_id" value="{{ r.rental_id }}">
+                                    <button class="btn btn-sm {% if r.status == 'overdue' %}btn-danger{% else %}btn-outline-warning{% endif %}">
+                                        Return
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {% if can_invoice %}
+                                <a href="/invoice/{{ r.rental_id }}" class="btn btn-sm btn-outline-primary">
+                                    Invoice
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-muted">No rentals yet.</div>
+    {% endif %}
+{% endblock %}
