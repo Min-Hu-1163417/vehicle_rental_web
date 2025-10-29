@@ -4,33 +4,38 @@ import pickle
 import threading
 import uuid
 
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "data.pkl")
+
 
 class Store:
     _inst = None
     _inst_lock = threading.Lock()
 
-    def __init__(self, path="data.pkl"):
-        self.path = path
-        self.users = {}  # renter_id -> dict
-        self.vehicles = {}  # vehicle_id -> dict
-        self.rentals = {}  # rental_id -> dict
+    def __init__(self, path: str | None = None):
+        # use a stable absolute path
+        self.path = path or DEFAULT_DATA_PATH
+        self.users = {}
+        self.vehicles = {}
+        self.rentals = {}
         self._rw = threading.RLock()
         self._load()
-        # Ensure at least one staff user exists
+
+        # ensure at least one staff user exists
         if not any(u.get("role") == "staff" for u in self.users.values()):
             self.users["staff-1"] = {
                 "renter_id": "staff-1",
                 "username": "admin",
                 "password_hash": "$pbkdf2-sha256$placeholder",
-                "role": "staff"
+                "role": "staff",
             }
         atexit.register(self.save)
 
     @classmethod
-    def instance(cls):
+    def instance(cls, path: str | None = None):
         with cls._inst_lock:
             if cls._inst is None:
-                cls._inst = Store()
+                cls._inst = Store(path or DEFAULT_DATA_PATH)
         return cls._inst
 
     def _load(self):
