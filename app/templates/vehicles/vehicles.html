@@ -50,7 +50,16 @@
                             <img src="{{ v.image_path }}" class="card-img-top" alt="vehicle">
                         </a>
                         <div class="card-body">
-                            <h5 class="card-title">{{ v.brand }} {{ v.model }}</h5>
+                            <h5 class="card-title text-center">
+                                {{ v.brand }} {{ v.model }}
+                                {% if v.status == 'overdue' %}
+                                    <small class="text-danger">(overdue)</small>
+                                {% elif v.status == 'rented' %}
+                                    <small class="text-primary">(rented)</small>
+                                {% else %}
+                                    <small class="text-success">(available)</small>
+                                {% endif %}
+                            </h5>
                             <p class="card-text">Type: {{ v.type }} | Rate: ${{ '%.2f'|format(v.rate) }}/day</p>
                         </div>
                     </div>

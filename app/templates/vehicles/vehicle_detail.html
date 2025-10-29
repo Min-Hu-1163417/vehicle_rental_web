@@ -1,55 +1,74 @@
 {% extends "layouts/base.html" %}
 {% block content %}
+    <!-- Vehicle basic information -->
     <h3>{{ v.brand }} {{ v.model }}</h3>
     <p>Type: {{ v.type }} | Rate: ${{ '%.2f'|format(v.rate) }}/day</p>
     <img src="{{ v.image_path }}" class="img-fluid mb-3" style="max-height:240px;object-fit:cover"/>
 
+    <!-- Normalize status and overdue days for consistent logic -->
+    {% set status = (v.status|string)|lower|trim %}
+    {% set overdue_days = (v.overdue_days|default(0))|int %}
+
+    <!-- Section heading: show "Booked Periods" or "No existing bookings" -->
     <h5>
-        {% if calendar %}
+        {% if calendar and calendar|length > 0 %}
             Booked Periods:
         {% else %}
             No existing bookings
         {% endif %}
     </h5>
 
-    {% if calendar %}
+    <!-- Display booked date ranges if any exist -->
+    {% if calendar and calendar|length > 0 %}
         <ul class="list-unstyled">
-            {% for s,e in calendar %}
-                <li>{{ s }} → {{ e }}</li>
+            {% for s, e in calendar %}
+                <li>{{ s | fmt_iso_local }} → {{ e | fmt_iso_local }}</li>
             {% endfor %}
         </ul>
-        <p class="text-danger small">The above periods are unavailable for rental.</p>
     {% endif %}
 
-    {% if session.get('role') != 'staff' %}
-        <hr/>
-        <form method="post" action="/rent" class="row g-2 justify-content-center">
-            <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}"/>
-
-            <div class="col-md-3">
-                <label class="form-label">Start Date</label>
-                <input id="start_date" type="date" class="form-control" name="start_date" required>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">End Date</label>
-                <input id="end_date" type="date" class="form-control" name="end_date" required>
-            </div>
-
-            <div class="col-md-3 d-flex align-items-end">
-                <button id="rent_btn" class="btn btn-primary w-100" type="submit">Rent</button>
-            </div>
-        </form>
+    <!-- Priority message: show overdue warning first, otherwise normal unavailable notice -->
+    {% if status == 'overdue' %}
+        <p class="text-danger small">
+            ⚠️ This vehicle is <strong>overdue</strong>. It cannot be rented until returned.
+        </p>
+    {% elif calendar and calendar|length > 0 %}
+        <p class="text-danger small">⚠️The above periods are unavailable for rental.</p>
     {% endif %}
 
+    {% if status != 'overdue' %}
+        <!-- Rental form (hidden for staff users) -->
+        {% if session.get('role') != 'staff' %}
+            <hr/>
+            <form method="post" action="/rent" class="row g-2 justify-content-center">
+                <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}"/>
 
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input id="start_date" type="date" class="form-control" name="start_date" required>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input id="end_date" type="date" class="form-control" name="end_date" required>
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <button id="rent_btn" class="btn btn-primary w-100" type="submit">Rent</button>
+                </div>
+            </form>
+        {% endif %}
+    {% endif %}
+
+    <!-- JavaScript logic for preventing rental overlaps and auto-adjusting date pickers -->
     <script>
-		// Booked ranges from server: [["2025-10-22","2025-10-23"], ...]
+		// Booked ranges sent from the server, e.g. [["2025-10-22","2025-10-23"], ...]
 		const booked = {{ calendar|tojson }};
 
 		const startEl = document.getElementById('start_date');
 		const endEl = document.getElementById('end_date');
 
+		// --- Utility functions for date handling ---
 		const z = n => String(n).padStart(2, '0');
 		const toYMD = d => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
 		const parseYMD = s => {
@@ -57,11 +76,12 @@
 			return new Date(y, m - 1, d);
 		};
 
-		// Normalize booked ranges to Date objects, half-open [start, end)
+		// Convert booked date ranges to Date objects, representing half-open intervals [start, end)
 		const blocks = (booked || [])
 			.map(([s, e]) => [parseYMD(s), parseYMD(e)])
 			.sort((a, b) => a[0] - b[0]);
 
+		// Check if a given date falls inside any booked block
 		function insideAnyBlock(d) {
 			for (const [bs, be] of blocks) {
 				if (d >= bs && d < be) return [bs, be];
@@ -69,17 +89,17 @@
 			return null;
 		}
 
-		// Move 'd' forward to the first day not inside any block
+		// Move 'd' forward until it's not inside any booked block
 		function nextFreeDay(d) {
 			let cur = new Date(d);
 			while (true) {
 				const hit = insideAnyBlock(cur);
 				if (!hit) return cur;
-				cur = new Date(hit[1]); // jump to end of the blocking window
+				cur = new Date(hit[1]); // skip to end of booked block
 			}
 		}
 
-		// Given a start 's', cap 'e' to the day before the next block that begins after s
+		// Cap end date to just before the next booked period after 's'
 		function capEndByNextBlock(s, e) {
 			let capped = new Date(e);
 			for (const [bs] of blocks) {
@@ -91,11 +111,11 @@
 			return capped;
 		}
 
-		// today/tomorrow base
+		// Initialize today's date (midnight)
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
-		// Init: start = nextFreeDay(today); end >= start+1 and capped by next block
+		// Initialize form defaults: start = first free day, end = +1 day
 		let initStart = nextFreeDay(today);
 		let initEnd = new Date(initStart);
 		initEnd.setDate(initEnd.getDate() + 1);
@@ -105,11 +125,13 @@
 			initEnd.setDate(initEnd.getDate() + 1);
 		}
 
+		// Assign initial datepicker values and constraints
 		startEl.min = toYMD(today);
 		startEl.value = toYMD(initStart);
 		endEl.min = toYMD(new Date(initStart.getFullYear(), initStart.getMonth(), initStart.getDate() + 1));
 		endEl.value = toYMD(initEnd);
 
+		// Sync logic: when user changes start or end date, validate and auto-correct
 		function sync() {
 			let s = parseYMD(startEl.value);
 			let e = parseYMD(endEl.value);

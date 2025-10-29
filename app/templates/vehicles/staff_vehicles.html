@@ -18,6 +18,7 @@
             <button class="btn btn-primary w-100">Add</button>
         </div>
     </form>
+
     <table class="table table-striped">
         <thead>
         <tr>
@@ -34,27 +35,36 @@
         <tbody>
         {% for v in vehicles %}
             <tr>
-                <td>{{ v.vehicle_id }}</td>
+                <td>
+                    <span class="vehicle-id" onclick="copyToClipboard('{{ v.vehicle_id }}', this)">
+                        {{ v.vehicle_id }}
+                    </span>
+                </td>
                 <td>{{ v.brand }}</td>
                 <td>{{ v.model }}</td>
                 <td>{{ v.type }}</td>
                 <td>{{ '%.2f'|format(v.rate) }}</td>
                 <td>
+                    {% set status = v.status | default('available', true) %}
                     <span class="badge
-                      {% if v.status=='rented' %} text-bg-primary
-                      {% elif v.status=='overdue' %} text-bg-danger
-                      {% elif v.status=='returned' %} text-bg-success
-                      {% elif v.status=='cancelled' %} text-bg-secondary
-                      {% else %} text-bg-light
-                      {% endif %}">
-                        {{ v.status | default('available', true) }}
+                        {% if status == 'rented' %} bg-primary
+                        {% elif status == 'overdue' %} bg-danger
+                        {% elif status == 'returned' %} bg-success
+                        {% elif status == 'cancelled' %} bg-secondary
+                        {% elif status == 'available' %} bg-success
+                        {% else %} bg-light text-dark
+                        {% endif %}">
+                        {{ status }}
                     </span>
-                    {% if v.status == 'overdue' and v.overdue_days %}
+
+                    {% if status == 'overdue' and v.overdue_days %}
                         <small class="text-danger ms-1">
                             ({{ v.overdue_days }} day{{ 's' if v.overdue_days|int != 1 }})
                         </small>
                     {% endif %}
                 </td>
+
+
                 <td><a class="btn btn-sm btn-outline-secondary" href="/vehicles/{{ v.vehicle_id }}">View</a></td>
                 <td>
                     <form method="post" action="/staff/vehicles/delete">
@@ -68,4 +78,33 @@
         {% endfor %}
         </tbody>
     </table>
+
+    <style>
+        .vehicle-id {
+            cursor: pointer;
+            color: #000 !important;
+            font-family: monospace;
+        }
+
+        .vehicle-id:hover {
+            color: #555;
+        }
+    </style>
+
+    <script>
+		function copyToClipboard(text, el) {
+			navigator.clipboard.writeText(text).then(() => {
+				el.style.color = "green";
+				const original = el.textContent;
+				el.textContent = "Copied!";
+				setTimeout(() => {
+					el.textContent = original;
+					el.style.color = "#0d6efd";
+				}, 1000);
+			}).catch(err => {
+				console.error('Copy failed', err);
+				alert("Failed to copy ID");
+			});
+		}
+    </script>
 {% endblock %}
