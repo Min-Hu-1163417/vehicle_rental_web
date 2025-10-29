@@ -23,9 +23,9 @@ def main():
     with app.app_context():
         store = Store.instance()
 
-        # ---- Staff / Customer / Corporate demo accounts ----
+        # ---- Staff / Individual / Corporate demo accounts ----
         ensure_user(store, "staff", "Staff123", "staff")
-        ensure_user(store, "customer", "Customer123", "customer")
+        ensure_user(store, "individual", "Individual123", "individual")
         ensure_user(store, "corporate", "Corporate123", "corporate")
 
         # ---- Demo vehicles (create only if none exist) ----
@@ -51,7 +51,7 @@ def main():
 
         print("✅ Seed complete.")
         print("🔑 Staff login:     staff / Staff123")
-        print("👤 Customer login:  customer / Customer123")
+        print("👤 Individual login:  individual / Individual123")
         print("🏢 Corporate login: corporate / Corporate123")
 
 

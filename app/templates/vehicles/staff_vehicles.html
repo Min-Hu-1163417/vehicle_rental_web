@@ -1,110 +1,141 @@
 {% extends "layouts/base.html" %}
 {% block content %}
-    <h3>Manage Vehicles</h3>
-    <form class="row g-2 mb-3" method="post" action="/staff/vehicles/add">
-        <div class="col-md-2"><input class="form-control" name="brand" placeholder="brand" required/></div>
-        <div class="col-md-2"><input class="form-control" name="model" placeholder="model" required/></div>
-        <div class="col-md-2">
-            <select class="form-select" name="type" required>
-                <option value="car">car</option>
-                <option value="motorbike">motorbike</option>
-                <option value="truck">truck</option>
-            </select>
-        </div>
-        <div class="col-md-2"><input class="form-control" name="rate" placeholder="rate/day" required/></div>
-        <div class="col-md-3"><input class="form-control" name="image_path"
-                                     placeholder="http/https or /static/..."/></div>
-        <div class="col-md-1">
-            <button class="btn btn-primary w-100">Add</button>
-        </div>
-    </form>
+<h3>Manage Vehicles</h3>
 
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>vehicle_id</th>
-            <th>brand</th>
-            <th>model</th>
-            <th>type</th>
-            <th>rate</th>
-            <th>status</th>
-            <th>Detail</th>
-            <th></th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for v in vehicles %}
-            <tr>
-                <td>
-                    <span class="vehicle-id" onclick="copyToClipboard('{{ v.vehicle_id }}', this)">
-                        {{ v.vehicle_id }}
-                    </span>
-                </td>
-                <td>{{ v.brand }}</td>
-                <td>{{ v.model }}</td>
-                <td>{{ v.type }}</td>
-                <td>{{ '%.2f'|format(v.rate) }}</td>
-                <td>
-                    {% set status = v.status | default('available', true) %}
-                    <span class="badge
-                        {% if status == 'rented' %} bg-primary
-                        {% elif status == 'overdue' %} bg-danger
-                        {% elif status == 'returned' %} bg-success
-                        {% elif status == 'cancelled' %} bg-secondary
-                        {% elif status == 'available' %} bg-success
-                        {% else %} bg-light text-dark
-                        {% endif %}">
-                        {{ status }}
-                    </span>
+<!-- Add vehicle form -->
+<form class="row g-2 mb-3" method="post" action="/staff/vehicles/add">
+    <div class="col-md-2">
+        <input class="form-control" name="brand" placeholder="brand" required>
+    </div>
+    <div class="col-md-2">
+        <input class="form-control" name="model" placeholder="model" required>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" name="type" required>
+            <option value="car">car</option>
+            <option value="motorbike">motorbike</option>
+            <option value="truck">truck</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input class="form-control" name="rate" placeholder="rate/day" required>
+    </div>
+    <div class="col-md-3">
+        <input class="form-control" name="image_path" placeholder="http/https or /static/...">
+    </div>
+    <div class="col-md-1">
+        <button class="btn btn-primary w-100">Add</button>
+    </div>
+</form>
 
-                    {% if status == 'overdue' and v.overdue_days %}
-                        <small class="text-danger ms-1">
-                            ({{ v.overdue_days }} day{{ 's' if v.overdue_days|int != 1 }})
-                        </small>
-                    {% endif %}
-                </td>
+<!-- Vehicle list -->
+{% if vehicles %}
+<table class="table table-striped align-middle">
+    <thead class="table-light">
+    <tr>
+        <th>ID</th>
+        <th>Brand</th>
+        <th>Model</th>
+        <th>Type</th>
+        <th>Rate/day</th>
+        <th>Status</th>
+        <th>Detail</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for v in vehicles %}
+    {% set status = v.status | default('available', true) %}
+    <tr>
+        <td>
+            <span class="vehicle-id" onclick="copyToClipboard('{{ v.vehicle_id }}', this)">
+                {{ v.vehicle_id }}
+            </span>
+        </td>
+        <td>{{ v.brand }}</td>
+        <td>{{ v.model }}</td>
+        <td>{{ v.type }}</td>
+        <td>${{ '%.2f'|format(v.rate) }}</td>
+        <td>
+            <span class="badge
+                {% if status == 'rented' %} bg-primary
+                {% elif status == 'overdue' %} bg-danger
+                {% elif status in ['returned', 'available'] %} bg-success
+                {% elif status == 'cancelled' %} bg-secondary
+                {% else %} bg-light text-dark
+                {% endif %}">
+                {{ status }}
+            </span>
+            {% if status == 'overdue' and v.overdue_days %}
+            <small class="text-danger ms-1">
+                ({{ v.overdue_days }} day{{ 's' if v.overdue_days|int != 1 }})
+            </small>
+            {% endif %}
+        </td>
+        <td>
+            <a class="btn btn-sm btn-outline-secondary" href="/vehicles/{{ v.vehicle_id }}">View</a>
+        </td>
+        <td>
+            <form method="post" action="/staff/vehicles/delete" onsubmit="return confirm('Delete this vehicle?');">
+                <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}">
+                <button class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
+{% else %}
+<!-- Empty state -->
+<div class="col-12 d-flex justify-content-center align-items-center py-5">
+    <div class="card shadow-sm border-0 text-center p-5" style="max-width: 540px;">
+        <div class="display-4 mb-3">🚗</div>
+        <h4 class="mb-2">No vehicles found</h4>
+        {% if has_filters %}
+        <p class="text-muted mb-4">
+            No vehicles match your current filters. Try adjusting your search criteria.
+        </p>
+        <a href="{{ request.path }}" class="btn btn-outline-primary">Reset filters</a>
+        {% else %}
+        <p class="text-muted mb-4">
+            There are currently no vehicles available.
+        </p>
+        <a href="{{ url_for('views.home') }}" class="btn btn-outline-secondary">Back to home</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
-                <td><a class="btn btn-sm btn-outline-secondary" href="/vehicles/{{ v.vehicle_id }}">View</a></td>
-                <td>
-                    <form method="post" action="/staff/vehicles/delete">
-                        <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}"/>
-                        <button class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Are you sure you want to delete this vehicle?');">Delete
-                        </button>
-                    </form>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<!-- Styles -->
+<style>
+    .vehicle-id {
+        cursor: pointer;
+        color: #000;
+        font-family: monospace;
+        transition: color 0.2s ease;
+    }
 
-    <style>
-        .vehicle-id {
-            cursor: pointer;
-            color: #000 !important;
-            font-family: monospace;
-        }
+    .vehicle-id:hover {
+        color: #0d6efd;
+    }
+</style>
 
-        .vehicle-id:hover {
-            color: #555;
-        }
-    </style>
-
-    <script>
-		function copyToClipboard(text, el) {
-			navigator.clipboard.writeText(text).then(() => {
-				el.style.color = "green";
-				const original = el.textContent;
-				el.textContent = "Copied!";
-				setTimeout(() => {
-					el.textContent = original;
-					el.style.color = "#0d6efd";
-				}, 1000);
-			}).catch(err => {
-				console.error('Copy failed', err);
-				alert("Failed to copy ID");
-			});
-		}
-    </script>
+<!-- JS -->
+<script>
+	function copyToClipboard(text, el) {
+		navigator.clipboard.writeText(text).then(() => {
+			const original = el.textContent;
+			el.style.color = "green";
+			el.textContent = "Copied!";
+			setTimeout(() => {
+				el.textContent = original;
+				el.style.color = "#000";
+			}, 1000);
+		}).catch(err => {
+			console.error('Copy failed', err);
+			alert("Failed to copy ID");
+		});
+	}
+</script>
 {% endblock %}

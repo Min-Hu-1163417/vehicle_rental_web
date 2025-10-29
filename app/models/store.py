@@ -3,6 +3,7 @@ import os
 import pickle
 import threading
 import uuid
+from app.utils.security import generate_hash
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "data.pkl")
@@ -23,10 +24,11 @@ class Store:
 
         # ensure at least one staff user exists
         if not any(u.get("role") == "staff" for u in self.users.values()):
-            self.users["staff-1"] = {
-                "renter_id": "staff-1",
-                "username": "admin",
-                "password_hash": "$pbkdf2-sha256$placeholder",
+            rid = str(uuid.uuid4())
+            self.users[rid] = {
+                "renter_id": rid,
+                "username": "staff",
+                "password_hash": generate_hash("Staff123"),
                 "role": "staff",
             }
         atexit.register(self.save)
