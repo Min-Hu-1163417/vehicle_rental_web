@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from ..exceptions import VehicleNotFoundError, RentalNotFoundError
 
 from ..services.rental_service import RentalService
 from ..services.vehicle_service import VehicleService

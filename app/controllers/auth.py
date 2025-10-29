@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from ..exceptions import VehicleNotFoundError, RentalNotFoundError
 
 from ..models.store import Store
 from ..utils.security import generate_hash, check_hash

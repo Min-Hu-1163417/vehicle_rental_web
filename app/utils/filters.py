@@ -1,4 +1,4 @@
-# app/utils/filters.py
+"""Jinja filters and date formatting helpers."""
 from datetime import datetime
 
 import pytz

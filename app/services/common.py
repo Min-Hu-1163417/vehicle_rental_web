@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""Shared service helpers and factories."""
 
 from datetime import datetime, date
 from typing import Optional

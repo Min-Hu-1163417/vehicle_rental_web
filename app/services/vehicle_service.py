@@ -1,8 +1,9 @@
-from __future__ import annotations
+"""Vehicle-related service layer utilities."""
 
 from typing import List, Tuple
 
 from app.models.store import Store
+from app.exceptions import VehicleNotFoundError
 from app.services.common import (
     ALLOWED_TYPES,
     PLACEHOLDER,
@@ -59,7 +60,11 @@ class VehicleService:
 
     @staticmethod
     def get_vehicle(vid: str):
-        return Store.instance().vehicles.get(vid)
+        """Return a vehicle dict by ID or raise VehicleNotFoundError."""
+        v = Store.instance().vehicles.get(vid)
+        if v is None:
+            raise VehicleNotFoundError(f"Error: vehicle with ID '{vid}' not found")
+        return v
 
     @staticmethod
     def admin_create_vehicle(data: dict):

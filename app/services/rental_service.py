@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""Rental-related service layer utilities."""
 
 from datetime import date, datetime, timezone
 
