@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
-from .staff import Service
+from ..services.rental_service import RentalService
+from ..services.vehicle_service import VehicleService
 from ..utils.decorators import login_required
 
 bp = Blueprint("rentals", __name__, url_prefix="/")
@@ -17,7 +18,7 @@ def list_vehicles():
     if request.args and not nonempty:
         return redirect(url_for("rentals.list_vehicles"))
 
-    vehicles = Service.filter_vehicles(
+    vehicles = VehicleService.filter_vehicles(
         vtype=nonempty.get("type"),
         brand=nonempty.get("brand"),
         min_rate=nonempty.get("min"),
@@ -30,11 +31,11 @@ def list_vehicles():
 @login_required
 def vehicle_detail(vid):
     """Vehicle detail page, show booked ranges so UI can avoid conflicts."""
-    v = Service.get_vehicle(vid)
+    v = VehicleService.get_vehicle(vid)
     if not v:
         flash("Vehicle not found")
         return redirect(url_for("rentals.list_vehicles"))
-    calendar = Service.availability_calendar(vid)
+    calendar = VehicleService.availability_calendar(vid)
     return render_template("vehicles/vehicle_detail.html", v=v, calendar=calendar)
 
 
@@ -43,7 +44,7 @@ def vehicle_detail(vid):
 def rent_vehicle():
     """Create a rental for current user if dates are valid and non-overlapping."""
     form = request.form
-    ok, msg, rid = Service.rent(
+    ok, msg, rid = RentalService.rent(
         renter_id=session.get("uid"),
         vehicle_id=form.get("vehicle_id"),
         start=form.get("start_date"),
@@ -65,7 +66,7 @@ def cancel_rental():
     role = session.get("role")
     is_staff = (role == "staff")
 
-    ok, msg = Service.cancel_rental(rid, requester_id=uid, is_staff=is_staff)
+    ok, msg = RentalService.cancel_rental(rid, requester_id=uid, is_staff=is_staff)
     flash(msg)
 
     return redirect(url_for("rentals.list_vehicles"))
@@ -75,7 +76,7 @@ def cancel_rental():
 @login_required
 def invoice(rid):
     """Show invoice for a rental id."""
-    inv = Service.invoice(rid)
+    inv = RentalService.invoice(rid)
     if not inv:
         flash("Invoice not found")
         return redirect(url_for("rentals.list_vehicles"))
@@ -98,7 +99,7 @@ def return_submit():
         }.get(role, "views.individual_dashboard")
         return redirect(url_for(dest))
 
-    ok, msg = Service.return_vehicle(rid)
+    ok, msg = RentalService.return_vehicle(rid)
     flash(msg, "success" if ok else "danger")
 
     # 按用户角色回到对应仪表盘（你的项目已有这些路由）

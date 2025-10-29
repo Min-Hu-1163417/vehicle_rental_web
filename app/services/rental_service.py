@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from app.models.store import Store
 from app.services.common import (
@@ -73,7 +73,7 @@ class RentalService:
             "discount": discount,
             "total": total,
             "status": "rented",
-            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),  # e.g. 2025-10-29T03:24:19+00:00
         })
 
         # Update vehicle snapshot (best-effort)

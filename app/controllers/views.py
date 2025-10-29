@@ -2,7 +2,8 @@ from datetime import date
 
 from flask import Blueprint, render_template, session, redirect, url_for
 
-from .staff import Service
+from ..services.user_service import UserService
+from ..services.vehicle_service import VehicleService
 from ..utils.decorators import login_required, role_required
 
 bp = Blueprint("views", __name__)
@@ -26,12 +27,12 @@ def home():
 @login_required
 @role_required("individual")
 def individual_dashboard():
-    Service.refresh_overdue_flags()
+    VehicleService.refresh_overdue_flags()
 
     uid = session.get("uid")
     if not uid:
         return redirect(url_for("auth.login"))
-    rentals = Service.rentals_for_user(uid)
+    rentals = UserService.rentals_for_user(uid)
 
     return render_template("dashboards/dash_individual.html", rentals=rentals,
                            current_date=date.today().strftime("%Y-%m-%d"))
@@ -41,7 +42,7 @@ def individual_dashboard():
 @login_required
 @role_required("corporate")
 def corporate_dashboard():
-    Service.refresh_overdue_flags()
+    VehicleService.refresh_overdue_flags()
 
     return render_template("dashboards/dash_corporate.html")
 
@@ -50,6 +51,6 @@ def corporate_dashboard():
 @login_required
 @role_required("staff")
 def staff_dashboard():
-    Service.refresh_overdue_flags()
+    VehicleService.refresh_overdue_flags()
 
     return render_template("dashboards/dash_staff.html")

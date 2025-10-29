@@ -5,6 +5,7 @@ from .controllers.rentals import bp as rentals_bp
 from .controllers.staff import bp as admin_bp
 from .controllers.views import bp as views_bp
 from .models.store import Store
+from .utils.filters import fmt_iso_local
 
 
 def create_app():
@@ -15,4 +16,6 @@ def create_app():
     app.register_blueprint(views_bp)
     app.register_blueprint(rentals_bp)
     app.register_blueprint(admin_bp)
+    app.jinja_env.filters["fmt_iso_local"] = fmt_iso_local
+
     return app

@@ -46,6 +46,7 @@ class UserService:
                 "total": r.get("total"),
                 "status": r.get("status", "rented"),
                 "overdue_days": r.get("overdue_days"),
+                "created_at": r.get("created_at"),
             })
         out.sort(key=lambda x: x.get("start_date") or "", reverse=True)
         return out

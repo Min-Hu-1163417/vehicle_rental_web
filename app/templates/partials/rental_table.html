@@ -2,6 +2,7 @@
     <table class="table table-hover align-middle">
         <thead>
         <tr>
+            <th class="text-nowrap">Ordered at</th>
             <th>Vehicle</th>
             <th>Type</th>
             <th>Period</th>
@@ -21,9 +22,12 @@
             {% set can_return = (r.status in ['rented','overdue'] and r.start_date <= today) %}
             {% set can_invoice = (r.status == 'returned') %}
             <tr>
+                <td>
+                    {{ r.created_at | fmt_iso_local }}
+                </td>
                 <td>{{ r.brand }} {{ r.model }}</td>
                 <td>{{ r.type }}</td>
-                <td>{{ r.start_date }} → {{ r.end_date }}</td>
+                <td>{{ r.start_date | fmt_iso_local }} → {{ r.end_date | fmt_iso_local }}</td>
                 <td class="text-end">{{ r.days }}</td>
                 <td class="text-end">${{ '%.2f'|format(r.rate) }}</td>
                 <td class="text-end">

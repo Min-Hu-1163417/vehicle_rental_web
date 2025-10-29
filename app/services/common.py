@@ -4,6 +4,7 @@ from datetime import datetime, date
 from typing import Optional
 from urllib.parse import urlparse
 
+from app.models.store import Store
 from app.models.user import UserBase, IndividualUser, CorporateUser, StaffUser
 from app.models.vehicle import VehicleBase, Car, Motorbike, Truck
 
@@ -13,16 +14,41 @@ PLACEHOLDER = "/static/images/placeholder.png"
 ACTIVE_RENTAL_STATES = {"rented", "overdue"}
 
 
+def _store() -> Store:
+    """Get the singleton store instance."""
+    return Store.instance()
+
+
+def _parse_date(s: str) -> date:
+    """Parse 'YYYY-MM-DD' into a date object; raise ValueError on bad input."""
+    return datetime.strptime(s, DATE_FMT).date()
+
+
 # -------- date & math helpers --------
 def parse_date(s: str) -> date:
     """Parse YYYY-MM-DD string to date."""
     return datetime.strptime(s, DATE_FMT).date()
 
 
+def _today() -> date:
+    """Wrapper for easier testing/mocking."""
+    return date.today()
+
+
+def round2(x: float) -> float:
+    return round(float(x), 2)
+
+
+def norm_type(value: Optional[str]) -> str:
+    """Normalize vehicle type to lowercase; return '' if None."""
+    return (value or "").strip().lower()
+
+
 def overlap(a_start: date, a_end: date, b_start: date, b_end: date) -> bool:
     """
     Check overlap between [a_start, a_end) and [b_start, b_end).
-    End date is exclusive.
+    End date is exclusive: booking 2025-10-22 -> 2025-10-23 occupies the night of 22 only.
+    Overlap rule: a_start < b_end and b_start < a_end
     """
     return a_start < b_end and b_start < a_end
 
@@ -53,6 +79,11 @@ def valid_image_path(s: Optional[str]) -> bool:
 def norm_type(value: Optional[str]) -> str:
     """Normalize vehicle type to lowercase string; return '' for None."""
     return (value or "").strip().lower()
+
+
+def _lc(s):
+    """Safe lowercase for case-insensitive compare."""
+    return (s or "").lower()
 
 
 # -------- dict -> rich model mappers --------
