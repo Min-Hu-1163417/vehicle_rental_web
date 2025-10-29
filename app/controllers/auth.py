@@ -8,7 +8,7 @@ bp = Blueprint("auth", __name__, url_prefix="/")
 
 @bp.get("register")
 def register_form():
-    return render_template("register.html")
+    return render_template("auth/register.html")
 
 
 @bp.post("register")
@@ -30,7 +30,7 @@ def register_submit():
 
 @bp.get("login")
 def login_form():
-    return render_template("login.html")
+    return render_template("auth/login.html")
 
 
 @bp.post("login")

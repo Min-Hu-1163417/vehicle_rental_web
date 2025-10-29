@@ -1,8 +1,6 @@
-from datetime import date
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from ..models.service import Service
-from ..models.store import Store
+
+from .staff import Service
 from ..utils.decorators import login_required
 
 bp = Blueprint("rentals", __name__, url_prefix="/")
@@ -25,7 +23,7 @@ def list_vehicles():
         min_rate=nonempty.get("min"),
         max_rate=nonempty.get("max"),
     )
-    return render_template("vehicles.html", vehicles=vehicles)
+    return render_template("vehicles/vehicles.html", vehicles=vehicles)
 
 
 @bp.get("/vehicles/<vid>")
@@ -37,7 +35,7 @@ def vehicle_detail(vid):
         flash("Vehicle not found")
         return redirect(url_for("rentals.list_vehicles"))
     calendar = Service.availability_calendar(vid)
-    return render_template("vehicle_detail.html", v=v, calendar=calendar)
+    return render_template("vehicles/vehicle_detail.html", v=v, calendar=calendar)
 
 
 @bp.post("/rent")
@@ -81,7 +79,7 @@ def invoice(rid):
     if not inv:
         flash("Invoice not found")
         return redirect(url_for("rentals.list_vehicles"))
-    return render_template("invoice.html", inv=inv)
+    return render_template("users/invoice.html", inv=inv)
 
 
 @bp.post("/return")

@@ -4,17 +4,16 @@ import uuid
 from collections import Counter, defaultdict
 from datetime import datetime, date
 from os import abort
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib import request
 from urllib.parse import urlparse
 
-from flask import Blueprint, session
+from flask import Blueprint
+from flask import request, render_template, redirect, url_for, flash
+from flask import session
 
 from ..models.store import Store
 from ..utils.security import generate_hash
-from flask import Blueprint, render_template
-from flask import request, render_template, redirect, url_for, flash
-import uuid
 
 # ---- Flask blueprint (keep the name and URL prefix unchanged) ----
 bp = Blueprint("staff", __name__, url_prefix="/staff")
@@ -51,7 +50,7 @@ PLACEHOLDER = "/static/images/placeholder.png"
 def staff_users():
     store = Service._store()
     users = list(store.users.values())
-    return render_template("staff_users.html", users=users)
+    return render_template("users/staff_users.html", users=users)
 
 
 @bp.get("/vehicles")
@@ -64,7 +63,7 @@ def staff_vehicles():
 
     vehicles = Service.filter_vehicles(vtype=vtype, brand=brand,
                                        min_rate=min_rate, max_rate=max_rate)
-    return render_template("staff_vehicles.html",
+    return render_template("vehicles/staff_vehicles.html",
                            vehicles=vehicles,
                            vtype=vtype, brand=brand,
                            min_rate=min_rate, max_rate=max_rate)
@@ -176,7 +175,7 @@ def staff_add_user():
 def staff_analytics():
     """Staff dashboards: system analytics summary."""
     data = Service.analytics()
-    return render_template("staff_analytics.html", data=data)
+    return render_template("users/staff_analytics.html", data=data)
 
 
 def _parse_date(s: str) -> date:

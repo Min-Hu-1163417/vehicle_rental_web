@@ -1,8 +1,8 @@
 from flask import Flask
 
-from .controllers.staff import bp as admin_bp
 from .controllers.auth import bp as auth_bp
 from .controllers.rentals import bp as rentals_bp
+from .controllers.staff import bp as admin_bp
 from .controllers.views import bp as views_bp
 from .models.store import Store
 

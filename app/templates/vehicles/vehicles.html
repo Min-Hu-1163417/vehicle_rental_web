@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layouts/base.html" %}
 {% block content %}
     <h3>Vehicles</h3>
 
@@ -22,11 +22,13 @@
 
         <div class="col-md-2">
             <input id="min" class="form-control" name="min" placeholder="Min rate"
+                   type="number" step="5" min="0"
                    value="{{ request.args.get('min','') }}"/>
         </div>
 
         <div class="col-md-2">
             <input id="max" class="form-control" name="max" placeholder="Max rate"
+                   type="number" step="5" min="0"
                    value="{{ request.args.get('max','') }}"/>
         </div>
 

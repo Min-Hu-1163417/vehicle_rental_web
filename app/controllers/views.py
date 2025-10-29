@@ -2,7 +2,7 @@ from datetime import date
 
 from flask import Blueprint, render_template, session, redirect, url_for
 
-from ..models.service import Service
+from .staff import Service
 from ..utils.decorators import login_required, role_required
 
 bp = Blueprint("views", __name__)
@@ -19,7 +19,7 @@ def home():
     elif role == "individual":
         return redirect("/dashboard/individual")
     else:
-        return render_template("login.html")
+        return render_template("auth/login.html")
 
 
 @bp.get("/dashboard/individual")
