@@ -44,7 +44,13 @@ def individual_dashboard():
 def corporate_dashboard():
     VehicleService.refresh_overdue_flags()
 
-    return render_template("dashboards/dash_corporate.html")
+    uid = session.get("uid")
+    if not uid:
+        return redirect(url_for("auth.login"))
+    rentals = UserService.rentals_for_user(uid)
+
+    return render_template("dashboards/dash_corporate.html", rentals=rentals,
+                           current_date=date.today().strftime("%Y-%m-%d"))
 
 
 @bp.get("/dashboard/staff")

@@ -1,16 +1,18 @@
 {% extends "layouts/base.html" %}
 {% block content %}
-    <div class="bg-white p-4 rounded shadow-sm">
-        <div class="d-flex align-items-center">
-            <h3 class="mb-0 flex-grow-1 text-center">Invoice #{{ inv.rental_id }}</h3>
-            <button class="btn btn-secondary no-print ms-3" onclick="window.print()">Print</button>
-        </div>
-        <hr/>
-        <p><strong>Renter:</strong> {{ inv.renter_id }}</p>
-        <p><strong>Vehicle:</strong> {{ inv.vehicle_id }}</p>
-        <p><strong>Period:</strong> {{ inv.start_date }} → {{ inv.end_date }} ({{ inv.days }} days)</p>
-        <p><strong>Rate:</strong> ${{ '%.2f'|format(inv.rate) }}/day</p>
-        <p><strong>Discount:</strong> {{ (inv.discount * 100)|round(0) }}%</p>
-        <h4>Total: ${{ '%.2f'|format(inv.total) }}</h4>
+<div class="bg-white p-4 rounded shadow-sm">
+    <div class="d-flex align-items-center">
+        <h3 class="mb-0 flex-grow-1 text-center">Invoice #{{ inv.rental_id }}</h3>
+        <button class="btn btn-secondary no-print ms-3" onclick="window.print()">Print</button>
     </div>
+    <hr/>
+    <p><strong>Renter:</strong> {{ inv.renter_id }}</p>
+    <p><strong>Vehicle:</strong> {{ inv.vehicle_id }}</p>
+    <p><strong>Period:</strong> {{ inv.start_date | fmt_iso_local }} → {{ inv.end_date | fmt_iso_local }} ({{
+            inv.days
+        }} days)</p>
+    <p><strong>Rate:</strong> ${{ '%.2f'|format(inv.rate) }}/day</p>
+    <p><strong>Discount:</strong> {{ (inv.discount * 100)|round(0) }}%</p>
+    <h4>Total: ${{ '%.2f'|format(inv.total) }}</h4>
+</div>
 {% endblock %}

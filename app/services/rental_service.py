@@ -38,13 +38,29 @@ class RentalService:
             vehicle_id: str,
             start: str,
             end: str,
-            store: Optional[Store] = None,
+            store: Optional["Store"] = None,
     ):
         """
         Create a rental if there is no active overlap for the same vehicle.
-        Returns (ok: bool, message: str, rental_id: Optional[str]).
+        Pricing includes role-based discounts:
+          - corporate: flat 15% off
+          - individual: 10% off when rental days >= 7
+          - others: no discount
+
+        Returns:
+            (ok: bool, message: str, rental_id: Optional[str])
         """
-        st = store or Store.instance()
+
+        # --- resolve backing store (prefer injected store in tests) ---
+        if store is not None:
+            st = store
+        else:
+            # Try common accessor used by tests; fallback to singleton
+            try:
+                from app.services.common import _store as _common_store
+                st = _common_store()
+            except Exception:
+                st = Store.instance()
 
         # --- vehicle lookup (support int/str keys) ---
         vid_raw = vehicle_id
@@ -53,57 +69,86 @@ class RentalService:
         if not veh:
             return False, "Invalid vehicle", None
 
-        # --- parse & validate new interval (as pure dates; end exclusive) ---
+        # --- parse & validate new interval (as pure dates; end is exclusive) ---
         try:
-            d1 = _as_date(start)
+            d1 = _as_date(start)  # must return datetime.date
             d2 = _as_date(end)
         except Exception:
             return False, "Invalid dates (YYYY-MM-DD)", None
+
         if d1 < date.today():
             return False, "Start date cannot be in the past", None
         if d2 <= d1:
             return False, "End date must be after start date", None
 
-        # --- active states fallback ---
-        active = set(ACTIVE_RENTAL_STATES) if ACTIVE_RENTAL_STATES else {"rented", "overdue"}
+        # --- resolve active rental states (fallback if constant missing) ---
+        try:
+            active_states = set(ACTIVE_RENTAL_STATES)  # e.g., {"rented", "overdue"}
+        except Exception:
+            active_states = {"rented", "overdue"}
 
-        # --- conflict check on half-open intervals [d1,d2) ---
-        for r in st.rentals.values():
+        # --- conflict check on half-open intervals [d1, d2) ---
+        for r in (st.rentals or {}).values():
             rv = r.get("vehicle_id")
             if not (rv == vid_raw or str(rv) == vid_str):
                 continue
-            if (r.get("status") or "") not in active:
+            status_lc = str(r.get("status") or "").lower()
+            if status_lc not in {s.lower() for s in active_states}:
                 continue
 
-            # support both start_date/end_date and start/end
+            # Support both start_date/end_date and start/end field names
             s_raw = r.get("start_date") or r.get("start")
             e_raw = r.get("end_date") or r.get("end")
             if not s_raw or not e_raw:
-                # if the record is malformed, skip it rather than false-positive
+                # Skip malformed records to avoid false positives
                 continue
 
-            s = _as_date(s_raw)
-            e = _as_date(e_raw)
+            try:
+                s = _as_date(s_raw)
+                e = _as_date(e_raw)
+            except Exception:
+                # Skip malformed records
+                continue
 
+            # Overlap for half-open ranges: [d1, d2) intersects [s, e) iff (d1 < e) and (s < d2)
             if (d1 < e) and (s < d2):
-                print("DEBUG-OVERLAP:", {"new": [d1, d2], "old": [s, e], "status": r.get("status")})
+                # print("DEBUG-OVERLAP:", {"new": [d1, d2], "old": [s, e], "status": r.get("status")})
                 return False, "Date conflict with existing rental", None
 
-        # --- simple pricing ---
+        # --- pricing with role-based discount ---
         days = (d2 - d1).days
-        rate = float(veh.get("rate", 0))
-        total = round(rate * days, 2)
+        try:
+            rate = float(veh.get("rate", 0) or 0)
+        except Exception:
+            rate = 0.0
+
+        # Look up renter to decide discount rules
+        renter = st.users.get(renter_id) or st.users.get(str(renter_id)) or {}
+        role = str(renter.get("role") or "").lower().strip()
+
+        # Discount policy:
+        # - corporate: flat 15% off
+        # - individual: 10% off if rental is >= 7 days
+        # - others (staff/unknown): no discount unless you define one
+        discount_ratio = 0.0
+        if role == "corporate":
+            discount_ratio = 0.15
+        elif role == "individual" and days >= 7:
+            discount_ratio = 0.10
+
+        base_total = rate * days
+        total = round(base_total * (1.0 - discount_ratio), 2)
 
         # --- persist ---
         rid = st.create_rental({
             "renter_id": str(renter_id),
-            "vehicle_id": vid_str,
+            "vehicle_id": vid_str,  # normalize to string ID
             "start_date": d1.isoformat(),
             "end_date": d2.isoformat(),
             "days": days,
             "rate": rate,
-            "discount": 0,
-            "total": total,
+            "discount": discount_ratio,  # store discount ratio (e.g., 0.15)
+            "total": total,  # final price after discount
             "status": "rented",
             "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
@@ -114,7 +159,11 @@ class RentalService:
         elif vid_raw in st.vehicles:
             st.vehicles[vid_raw]["status"] = "rented"
 
-        st.save()
+        # --- optional save (fake stores in tests may not define save()) ---
+        save_fn = getattr(st, "save", None)
+        if callable(save_fn):
+            save_fn()
+
         return True, "OK", rid
 
     @staticmethod
