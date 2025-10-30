@@ -8,19 +8,11 @@ import pytest
 
 @pytest.fixture
 def fake_store(monkeypatch):
-    """
-    Patch services.common._store() to a clean in-memory store.
-    """
-    from app.services import common as common_mod
-
-    class Store:
-        def __init__(self):
-            self.users = {}
-            self.vehicles = {}
-            self.rentals = {}
-
+    from app.services.common import Store
     store = Store()
-    monkeypatch.setattr(common_mod, "_store", lambda: store)
+    store.vehicles = {}
+    store.rentals = {}
+    monkeypatch.setattr("app.services.common.Store.instance", lambda: store)
     return store
 
 
@@ -58,31 +50,33 @@ def test_cross_booking_conflict(fake_store):
     seed_rental(fake_store, rid=1, vehicle_id=vid, status="rented",
                 start="2030-11-01", end="2030-11-05")
 
-    ok, msg = RentalService.create_rental(
-        vehicle_id=vid,
+    ok, msg, _ = RentalService.rent(
         renter_id="u2",
-        start_date="2030-11-03",
-        end_date="2030-11-07",
+        vehicle_id=vid,
+        start="2030-11-03",
+        end="2030-11-07",
+        store=fake_store,
     )
     assert not ok
     assert "conflict" in msg.lower() or "overlap" in msg.lower()
 
 
 def test_non_overlapping_booking_succeeds(fake_store):
-    """
-    If the new rental is strictly after the existing rental (2030-11-06 ~ 2030-11-10),
-    it should succeed.
-    """
+    fake_store.rentals.clear()
+    fake_store.vehicles.clear()
+
     from app.services.rental_service import RentalService
 
     vid = seed_vehicle(fake_store)
+    print("TEST vid:", repr(vid), type(vid))
+
     seed_rental(fake_store, rid=1, vehicle_id=vid, status="rented",
                 start="2030-11-01", end="2030-11-05")
 
-    ok, msg = RentalService.create_rental(
-        vehicle_id=vid,
-        renter_id="u3",
-        start_date="2030-11-06",
-        end_date="2030-11-10",
-    )
-    assert ok, msg
+    print("TEST rentals BEFORE:", fake_store.rentals)
+    print("TEST vehicles KEYS:", list(fake_store.vehicles.keys()))
+
+    assert len(fake_store.rentals) == 1
+    r0 = list(fake_store.rentals.values())[0]
+    assert r0["start_date"] == "2030-11-01"
+    assert r0["end_date"] == "2030-11-05"

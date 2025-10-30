@@ -88,3 +88,4 @@ Thumbs.db
 *.gz
 *.tflite
 *.h5
+data.pkl

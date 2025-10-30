@@ -40,9 +40,13 @@ def login_submit():
     password = request.form.get("password", "")
     store = Store.instance()
     user = store.find_user(username)
+
     if not user or not check_hash(password, user["password_hash"]):
         flash("Invalid credentials")
         return redirect(url_for("auth.login_form"))
+
+    session["user_id"] = user["renter_id"]
+    session["_user_id"] = user["renter_id"]
     session["uid"] = user["renter_id"]
     session["role"] = user["role"]
     session["username"] = user["username"]
@@ -52,7 +56,11 @@ def login_submit():
         "corporate": "views.corporate_dashboard",
         "individual": "views.individual_dashboard",
     }.get(user["role"], "views.individual_dashboard")
-    return redirect(url_for(dest))
+
+    try:
+        return redirect(url_for(dest))
+    except Exception:
+        return redirect(url_for("home"))
 
 
 @bp.get("logout")

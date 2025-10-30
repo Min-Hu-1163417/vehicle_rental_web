@@ -10,8 +10,16 @@ from ..services.analytics_service import AnalyticsService
 from ..services.common import _store
 from ..services.user_service import UserService
 from ..services.vehicle_service import VehicleService
+from ..utils.decorators import login_required, role_required
 
 bp = Blueprint("staff", __name__, url_prefix="/staff")
+
+
+@bp.before_request
+@login_required
+@role_required("staff")
+def _protect_staff_area():
+    return None
 
 
 @bp.get("/users")
@@ -50,7 +58,7 @@ def staff_add_vehicle():
         "image_path": request.form.get("image_path", "").strip(),
     }
 
-    ok, msg = VehicleService.admin_create_vehicle(data)
+    ok, msg, _ = VehicleService.admin_create_vehicle(data)
     flash(msg, "success" if ok else "danger")
     return redirect(url_for("staff.staff_vehicles"))
 

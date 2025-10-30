@@ -8,20 +8,12 @@ import pytest
 
 @pytest.fixture
 def fake_store(monkeypatch):
-    """
-    Patch services.common._store() to a clean, isolated in-memory store.
-    """
-    from app.services import common as common_mod
-
-    class Store:
-        def __init__(self):
-            self.users = {}
-            self.vehicles = {}
-            self.rentals = {}
-
-    store = Store()
-    monkeypatch.setattr(common_mod, "_store", lambda: store)
-    return store
+    from app.services.common import Store
+    s = Store()
+    s.vehicles.clear()
+    s.rentals.clear()
+    s.users.clear()
+    return s
 
 
 def test_admin_create_and_delete_vehicle(fake_store):
@@ -39,7 +31,7 @@ def test_admin_create_and_delete_vehicle(fake_store):
         "image_path": "",
     }
 
-    ok, msg = VehicleService.admin_create_vehicle(payload)
+    ok, msg, _ = VehicleService.admin_create_vehicle(payload, store=fake_store)
     assert ok, msg
     assert fake_store.vehicles, "Expected at least one vehicle in the store"
     vid = next(iter(fake_store.vehicles.keys()))
@@ -47,6 +39,6 @@ def test_admin_create_and_delete_vehicle(fake_store):
     assert v["brand"] == "Toyota"
     assert v["status"] == "available"
 
-    ok, msg = VehicleService.delete_vehicle(vid)
+    ok, msg = VehicleService.delete_vehicle(vid, store=fake_store)
     assert ok, msg
     assert vid not in fake_store.vehicles

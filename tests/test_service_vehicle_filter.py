@@ -26,9 +26,9 @@ def fake_store(monkeypatch):
     # Seed vehicles
     store.vehicles = {
         1: {"id": 1, "brand": "Toyota", "model": "Corolla", "type": "car", "rate": 55.0, "status": "available"},
-        2: {"id": 2, "brand": "Honda",  "model": "Fit",     "type": "car", "rate": 40.0, "status": "available"},
-        3: {"id": 3, "brand": "Yamaha", "model": "R3",      "type": "motorbike", "rate": 35.0, "status": "available"},
-        4: {"id": 4, "brand": "Isuzu",  "model": "NQR",     "type": "truck", "rate": 150.0, "status": "available"},
+        2: {"id": 2, "brand": "Honda", "model": "Fit", "type": "car", "rate": 40.0, "status": "available"},
+        3: {"id": 3, "brand": "Yamaha", "model": "R3", "type": "motorbike", "rate": 35.0, "status": "available"},
+        4: {"id": 4, "brand": "Isuzu", "model": "NQR", "type": "truck", "rate": 150.0, "status": "available"},
     }
 
     monkeypatch.setattr(common_mod, "_store", lambda: store)
@@ -40,7 +40,7 @@ def test_filter_by_partial_brand(fake_store):
     Should return Toyota when searching by partial brand (case-insensitive).
     """
     from app.services.vehicle_service import VehicleService
-    rows = VehicleService.filter_vehicles(brand="toY")
+    rows = VehicleService.filter_vehicles(brand="toY", store=fake_store)
     brands = [r["brand"] for r in rows]
     assert "Toyota" in brands
     assert all(isinstance(r, dict) for r in rows)
@@ -51,7 +51,7 @@ def test_filter_by_type(fake_store):
     Should filter by exact type (e.g. 'car') and return only that type.
     """
     from app.services.vehicle_service import VehicleService
-    rows = VehicleService.filter_vehicles(vtype="car")
+    rows = VehicleService.filter_vehicles(vtype="car", store=fake_store)
     assert len(rows) >= 2
     assert all(r["type"] == "car" for r in rows)
 
@@ -61,7 +61,7 @@ def test_filter_by_min_max_rate(fake_store):
     Should filter by min/max rate even if inputs are strings (simulating query strings).
     """
     from app.services.vehicle_service import VehicleService
-    rows = VehicleService.filter_vehicles(min_rate="50", max_rate="200")
+    rows = VehicleService.filter_vehicles(min_rate="50", max_rate="200", store=fake_store)
     rates = [r["rate"] for r in rows]
     assert rates, "Expected at least one vehicle in range"
     assert all(50.0 <= rate <= 200.0 for rate in rates)
@@ -72,7 +72,7 @@ def test_filter_with_empty_params_returns_all(fake_store):
     Empty inputs should not crash and should return all vehicles.
     """
     from app.services.vehicle_service import VehicleService
-    rows = VehicleService.filter_vehicles(brand=None, vtype=None, min_rate=None, max_rate=None)
+    rows = VehicleService.filter_vehicles(brand=None, vtype=None, min_rate=None, max_rate=None, store=fake_store)
     assert len(rows) == len(fake_store.vehicles)
 
 
@@ -81,5 +81,5 @@ def test_filter_ignores_invalid_min_max(fake_store):
     Invalid min/max values should be safely ignored instead of raising.
     """
     from app.services.vehicle_service import VehicleService
-    rows = VehicleService.filter_vehicles(min_rate="not-a-number", max_rate="n/a")
+    rows = VehicleService.filter_vehicles(min_rate="not-a-number", max_rate="n/a", store=fake_store)
     assert len(rows) == len(fake_store.vehicles)

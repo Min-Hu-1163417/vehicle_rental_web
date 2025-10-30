@@ -16,7 +16,7 @@ def _get_session_user_id(client):
 
 def _register(client, username, password, role="individual", follow=True):
     return client.post(
-        "/auth/register",
+        "/register",
         data={"username": username, "password": password, "role": role},
         follow_redirects=follow,
     )
@@ -24,14 +24,14 @@ def _register(client, username, password, role="individual", follow=True):
 
 def _login(client, username, password, follow=True):
     return client.post(
-        "/auth/login",
+        "/login",
         data={"username": username, "password": password},
         follow_redirects=follow,
     )
 
 
 def _logout(client, follow=True):
-    return client.get("/auth/logout", follow_redirects=follow)
+    return client.get("/logout", follow_redirects=follow)
 
 
 @pytest.fixture(autouse=True)
@@ -96,10 +96,10 @@ def test_staff_login_can_access_staff_pages(client, clean_store):
     If a 'staff' user exists and logs in, they should be able to access /staff/ pages.
     """
     from app.services.user_service import UserService
-    ok, msg = UserService.admin_create_user("staffer", "staff", "adminpw")
+    ok, msg = UserService.admin_create_user("staffer", "staff", "Adminpw1")
     assert ok, msg
 
-    r = _login(client, "staffer", "adminpw")
+    r = _login(client, "staffer", "Adminpw1")
     assert r.status_code in (200, 302)
     assert _get_session_user_id(client)
 
@@ -112,10 +112,10 @@ def test_logout_revokes_access(client, clean_store):
     After logout, staff-only pages should be blocked again.
     """
     from app.services.user_service import UserService
-    ok, msg = UserService.admin_create_user("staffer", "staff", "adminpw")
+    ok, msg = UserService.admin_create_user("staffer1", "staff", "adminpw")
     assert ok, msg
 
-    _login(client, "staffer", "adminpw")
+    _login(client, "staffer1", "adminpw")
     assert _get_session_user_id(client)
 
     r = _logout(client)

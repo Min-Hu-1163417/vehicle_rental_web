@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from app.models.store import Store
 from app.models.user import UserBase, IndividualUser, CorporateUser, StaffUser
 from app.models.vehicle import VehicleBase, Car, Motorbike, Truck
+from math import isnan
 
 DATE_FMT = "%Y-%m-%d"
 ALLOWED_TYPES = {"car", "motorbike", "truck"}
@@ -54,9 +55,26 @@ def overlap(a_start: date, a_end: date, b_start: date, b_end: date) -> bool:
 
 
 def to_float_safe(value) -> Optional[float]:
-    """Safely convert to float; return None if invalid."""
+    """
+    Best-effort parse to float.
+    - Strips whitespace, removes common currency symbols and thousand separators.
+    - Returns None for invalid values or NaN.
+    """
+    if value is None:
+        return None
     try:
-        return float(value)
+        if isinstance(value, str):
+            s = value.strip()
+            if not s:
+                return None
+            # Remove currency symbols and thousand separators
+            for ch in ("$", "€", "£", "¥"):
+                s = s.replace(ch, "")
+            s = s.replace(",", "")
+            f = float(s)
+        else:
+            f = float(value)
+        return None if isnan(f) else f
     except (TypeError, ValueError):
         return None
 

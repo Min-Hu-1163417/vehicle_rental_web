@@ -1,6 +1,7 @@
 """Rental-related service layer utilities."""
 
 from datetime import date, datetime, timezone
+from typing import Optional
 
 from app.models.store import Store
 from app.services.common import (
@@ -13,6 +14,18 @@ from app.services.common import (
 )
 
 
+def _as_date(x):
+    """Coerce any date-like to a naive date (supports 'YYYY-MM-DD' or ISO with T)."""
+    if isinstance(x, date) and not isinstance(x, datetime):
+        return x
+    if isinstance(x, datetime):
+        return x.date()
+    if isinstance(x, str):
+        base = x.split("T", 1)[0].strip()
+        return date.fromisoformat(base)
+    raise ValueError(f"Unsupported date: {x!r}")
+
+
 class RentalService:
     """
     Rent, return, cancel, and invoice operations.
@@ -20,67 +33,88 @@ class RentalService:
     """
 
     @staticmethod
-    def rent(renter_id: str, vehicle_id: str, start: str, end: str):
-        store = Store.instance()
+    def rent(
+            renter_id: str,
+            vehicle_id: str,
+            start: str,
+            end: str,
+            store: Optional[Store] = None,
+    ):
+        """
+        Create a rental if there is no active overlap for the same vehicle.
+        Returns (ok: bool, message: str, rental_id: Optional[str]).
+        """
+        st = store or Store.instance()
 
-        user_dict = store.get_user(renter_id)
-        veh_dict = store.vehicles.get(vehicle_id)
-        if not user_dict or not veh_dict:
-            return False, "Invalid renter or vehicle", None
+        # --- vehicle lookup (support int/str keys) ---
+        vid_raw = vehicle_id
+        vid_str = str(vehicle_id)
+        veh = st.vehicles.get(vid_raw) or st.vehicles.get(vid_str)
+        if not veh:
+            return False, "Invalid vehicle", None
 
-        # Validate dates
+        # --- parse & validate new interval (as pure dates; end exclusive) ---
         try:
-            d1 = parse_date(start)
-            d2 = parse_date(end)
+            d1 = _as_date(start)
+            d2 = _as_date(end)
         except Exception:
             return False, "Invalid dates (YYYY-MM-DD)", None
-
-        today = date.today()
-        if d1 < today:
+        if d1 < date.today():
             return False, "Start date cannot be in the past", None
         if d2 <= d1:
-            return False, "End must be after start", None
+            return False, "End date must be after start date", None
 
-        # Overlap check against active rentals of the same vehicle
-        for r in store.rentals.values():
-            if r.get("vehicle_id") != vehicle_id:
+        # --- active states fallback ---
+        active = set(ACTIVE_RENTAL_STATES) if ACTIVE_RENTAL_STATES else {"rented", "overdue"}
+
+        # --- conflict check on half-open intervals [d1,d2) ---
+        for r in st.rentals.values():
+            rv = r.get("vehicle_id")
+            if not (rv == vid_raw or str(rv) == vid_str):
                 continue
-            if (r.get("status") or "") not in ACTIVE_RENTAL_STATES:
+            if (r.get("status") or "") not in active:
                 continue
-            s = parse_date(r["start_date"])
-            e = parse_date(r["end_date"])
-            if overlap(d1, d2, s, e):
-                return False, "Selected dates overlap with existing bookings", None
 
-        # Pricing via models
-        user_obj = user_from_dict(user_dict)
-        veh_obj = vehicle_from_dict(veh_dict)
-        if not user_obj or not veh_obj:
-            return False, "Failed to construct models", None
+            # support both start_date/end_date and start/end
+            s_raw = r.get("start_date") or r.get("start")
+            e_raw = r.get("end_date") or r.get("end")
+            if not s_raw or not e_raw:
+                # if the record is malformed, skip it rather than false-positive
+                continue
 
+            s = _as_date(s_raw)
+            e = _as_date(e_raw)
+
+            if (d1 < e) and (s < d2):
+                print("DEBUG-OVERLAP:", {"new": [d1, d2], "old": [s, e], "status": r.get("status")})
+                return False, "Date conflict with existing rental", None
+
+        # --- simple pricing ---
         days = (d2 - d1).days
-        base = veh_obj.price_for_days(days)
-        discount = user_obj.discount_for(days)
-        total = round(base * (1 - discount), 2)
+        rate = float(veh.get("rate", 0))
+        total = round(rate * days, 2)
 
-        rid = store.create_rental({
-            "renter_id": renter_id,
-            "vehicle_id": vehicle_id,
-            "start_date": start,
-            "end_date": end,
+        # --- persist ---
+        rid = st.create_rental({
+            "renter_id": str(renter_id),
+            "vehicle_id": vid_str,
+            "start_date": d1.isoformat(),
+            "end_date": d2.isoformat(),
             "days": days,
-            "rate": float(veh_dict.get("rate", 0)),  # keep listed rate for UI
-            "discount": discount,
+            "rate": rate,
+            "discount": 0,
             "total": total,
             "status": "rented",
-            "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),  # e.g. 2025-10-29T03:24:19+00:00
+            "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
 
-        # Update vehicle snapshot (best-effort)
-        if vehicle_id in store.vehicles:
-            store.vehicles[vehicle_id]["status"] = "rented"
+        # --- snapshot vehicle status ---
+        if vid_str in st.vehicles:
+            st.vehicles[vid_str]["status"] = "rented"
+        elif vid_raw in st.vehicles:
+            st.vehicles[vid_raw]["status"] = "rented"
 
-        store.save()
+        st.save()
         return True, "OK", rid
 
     @staticmethod

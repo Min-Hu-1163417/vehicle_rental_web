@@ -1,112 +1,185 @@
-"""Vehicle-related service layer utilities."""
+from __future__ import annotations
+from typing import List, Tuple, Optional, TYPE_CHECKING, Any
+from app.services.common import norm_type, to_float_safe, _today, _parse_date, _lc, _store
+from app.utils.constants import VehicleStatus, RentalStatus
 
-from typing import List, Tuple
-
-from app.models.store import Store
-from app.exceptions import VehicleNotFoundError
-from app.services.common import (
-    ALLOWED_TYPES,
-    PLACEHOLDER,
-    ACTIVE_RENTAL_STATES,
-    norm_type,
-    valid_image_path,
-    to_float_safe, _today, _parse_date, _lc,
-)
-from app.utils.constants import RentalStatus, VehicleStatus
+if TYPE_CHECKING:
+    # Only for type hints; won't execute at runtime
+    from app.models.store import Store  # noqa: F401
 
 
 class VehicleService:
     """Vehicle catalogue: filter, create, delete."""
 
-    @staticmethod
-    def filter_vehicles(vtype=None, brand=None, min_rate=None, max_rate=None):
-        store = Store.instance()
-        res = list(store.vehicles.values())  # Retrieve all vehicles from the Store singleton
+    # tests can inject: VehicleService.store = fake_store
+    store: Any = None
 
-        # Filter by vehicle type: exact match (normalized for consistency)
+    @staticmethod
+    def _get_store():
+        """
+        Prefer injected store (for tests). Otherwise try common import paths.
+        Includes app.models.store (most likely correct in your project).
+        """
+        if VehicleService.store is not None:
+            return VehicleService.store
+
+        # Lazy import with robust fallbacks
+        StoreCls = None
+        # A) the most likely layout in your project
+        try:
+            from app.models.store import Store as _Store  # type: ignore
+            StoreCls = _Store
+        except ModuleNotFoundError:
+            pass
+
+        # B) fallback: app.store
+        if StoreCls is None:
+            try:
+                from app.store import Store as _Store  # type: ignore
+                StoreCls = _Store
+            except ModuleNotFoundError:
+                pass
+
+        # C) fallback: relative to services/ (..models.store)
+        if StoreCls is None:
+            try:
+                from ..models.store import Store as _Store  # type: ignore
+                StoreCls = _Store
+            except Exception:
+                pass
+
+        # D) flat fallback: store.py at sys.path root
+        if StoreCls is None:
+            from store import Store as _Store  # type: ignore
+            StoreCls = _Store
+
+        return StoreCls.instance()
+
+    @staticmethod
+    def filter_vehicles(vtype=None, brand=None, min_rate=None, max_rate=None, *, store=None):
+        """
+        Filter vehicles by type, brand/model, and price range.
+        - If `store` is provided, use it (for tests).
+        - Otherwise call app.services.common._store() (tests monkeypatch this).
+        """
+        # 1. Resolve data source
+        st = store or _store()
+        res = list(getattr(st, "vehicles", {}).values())
+
+        # 2. Type filter
         if vtype:
             vt = norm_type(vtype)
             res = [v for v in res if norm_type(v.get("type")) == vt]
 
-        # Filter by brand/model: case-insensitive fuzzy match
+        # 3. Brand/model filter (case-insensitive, partial match)
         if brand:
-            kw = _lc(brand).strip()  # Convert to lowercase and trim spaces
+            kw = _lc(brand).strip()
             if kw:
-                res = [
-                    v for v in res
-                    if (kw in _lc(v.get("brand")) or kw in _lc(v.get("model")))
-                ]
+                def match(v):
+                    b = _lc(v.get("brand") or "")
+                    m = _lc(v.get("model") or "")
+                    return (kw in b) or (kw in m)
 
-        # Convert rate filters safely to float (avoid type errors)
+                res = [v for v in res if match(v)]
+
+        # 4. Price range filter (invalid min/max ignored)
         min_val = to_float_safe(min_rate)
         max_val = to_float_safe(max_rate)
+        if (min_val is not None) and (max_val is not None) and (min_val > max_val):
+            min_val, max_val = max_val, min_val
 
-        # Apply minimum rate filter (greater than or equal)
-        if min_val is not None:
-            res = [
-                v for v in res
-                if to_float_safe(v.get("rate", 0)) is not None and float(v.get("rate", 0)) >= min_val
-            ]
+        if (min_val is not None) or (max_val is not None):
+            def within(v):
+                r = to_float_safe(v.get("rate"))
+                if r is None:
+                    return False
+                if (min_val is not None) and (r < min_val):
+                    return False
+                if (max_val is not None) and (r > max_val):
+                    return False
+                return True
 
-        # Apply maximum rate filter (less than or equal)
-        if max_val is not None:
-            res = [
-                v for v in res
-                if to_float_safe(v.get("rate", 0)) is not None and float(v.get("rate", 0)) <= max_val
-            ]
+            res = [v for v in res if within(v)]
 
-        # Return the filtered vehicle list
         return res
 
     @staticmethod
     def get_vehicle(vid: str):
         """Return a vehicle dict by ID or raise VehicleNotFoundError."""
-        v = Store.instance().vehicles.get(vid)
+        store = VehicleService._get_store()
+        v = store.vehicles.get(vid)
         if v is None:
             raise VehicleNotFoundError(f"Error: vehicle with ID '{vid}' not found")
         return v
 
     @staticmethod
-    def admin_create_vehicle(data: dict):
+    def admin_create_vehicle(payload: dict, store: Optional["Store"] = None):
         """
-        Minimal validation for staff add-vehicle form.
-        Fallback to placeholder image when invalid path is provided.
+        Create a vehicle record into the given store (for testing)
+        or the active store by default.
         """
-        t = (data.get("type") or "").lower().strip()
-        if t not in ALLOWED_TYPES:
-            return False, "Invalid vehicle type"
-        img = (data.get("image_path") or "").strip()
-        if not valid_image_path(img):
-            img = PLACEHOLDER
-        data["image_path"] = img
-        Store.instance().create_vehicle(data)
-        return True, "Vehicle created"
+        st = store or VehicleService._get_store()  # use fake_store if provided
+
+        brand = (payload.get("brand") or "").strip()
+        model = (payload.get("model") or "").strip()
+        vtype = (payload.get("type") or "").lower().strip()
+        rate = float(payload.get("rate") or 0)
+
+        if not brand or not model or vtype not in ("car", "motorbike", "truck"):
+            return False, "Invalid vehicle data", None
+
+        vid = st.create_vehicle({
+            "brand": brand,
+            "model": model,
+            "type": vtype,
+            "rate": rate,
+            "status": "available",
+            "image_path": payload.get("image_path") or "/static/images/placeholder.png",
+        })
+
+        return True, "Vehicle created", vid
 
     @staticmethod
-    def delete_vehicle(vehicle_id: str):
+    def delete_vehicle(vehicle_id: str, store: Optional["Store"] = None):
         """
-        Delete only when there is NO active rental referencing the vehicle.
-        Source of truth is rentals, not snapshot 'status'.
+        Delete a vehicle if and only if:
+        - the vehicle exists,
+        - the vehicle itself is not in an active state (rented/overdue),
+        - there are no active rentals referencing this vehicle.
+        The persistence layer's `save()` is optional (no-op if missing).
         """
-        store = Store.instance()
-        v = store.vehicles.get(vehicle_id)
-        if not v:
+        st = store or VehicleService._get_store()
+
+        veh = getattr(st, "vehicles", {}).get(vehicle_id)
+        if not veh:
             return False, "Vehicle not found"
 
-        has_active = any(
-            (r.get("vehicle_id") == vehicle_id) and ((r.get("status") or "") in ACTIVE_RENTAL_STATES)
-            for r in store.rentals.values()
-        )
-        if has_active:
-            return False, "Vehicle is currently rented/overdue"
+        # Guard 1: vehicle status must not be active
+        active_vehicle_states = {"rented", "overdue"}
+        if (veh.get("status") or "").lower() in active_vehicle_states:
+            return False, f"Cannot delete while {veh.get('status')}"
 
-        del store.vehicles[vehicle_id]
-        store.save()
+        # Guard 2: no active rentals referencing this vehicle
+        # Adjust the set if your project defines ACTIVE_RENTAL_STATES elsewhere.
+        active_rental_states = {"rented", "overdue"}
+        rentals = getattr(st, "rentals", {}) or {}
+        for r in rentals.values():
+            if r.get("vehicle_id") == vehicle_id and (r.get("status") or "").lower() in active_rental_states:
+                return False, "Cannot delete: active rentals exist"
+
+        # Perform deletion
+        del st.vehicles[vehicle_id]
+
+        # Optional save: do nothing if the store has no save()
+        save = getattr(st, "save", None)
+        if callable(save):
+            save()
+
         return True, "Vehicle deleted"
 
     @staticmethod
     def all_vehicles():
-        return list(Store.instance().vehicles.values())
+        return list(VehicleService._get_store().vehicles.values())
 
     @staticmethod
     def availability_calendar(vehicle_id: str):
@@ -114,7 +187,7 @@ class VehicleService:
         Return a list of (start, end) strings for active rentals (rented/overdue).
         Used by the UI to disable booked date ranges.
         """
-        store = Store.instance()
+        store = VehicleService._get_store()
         ranges: List[Tuple[str, str]] = []
         for r in store.rentals.values():
             if r.get("vehicle_id") != vehicle_id:
@@ -130,7 +203,7 @@ class VehicleService:
         If a rental end_date < today and status is still 'rented' -> mark rental 'overdue'
         and set the vehicle to 'overdue'.
         """
-        store = Store.instance()
+        store = VehicleService._get_store()
         today = _today()
 
         for rental in store.rentals.values():

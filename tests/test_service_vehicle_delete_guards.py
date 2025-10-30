@@ -55,7 +55,7 @@ def put_rental(store, rid, vehicle_id, status, start="2030-11-01", end="2030-11-
 def test_cannot_delete_vehicle_if_status_rented(fake_store):
     from app.services.vehicle_service import VehicleService
     vid = put_vehicle(fake_store, vid=1, status="rented")
-    ok, msg = VehicleService.delete_vehicle(vid)
+    ok, msg = VehicleService.delete_vehicle(vid, store=fake_store)
     assert not ok
     assert "rented" in msg.lower()
 
@@ -63,7 +63,7 @@ def test_cannot_delete_vehicle_if_status_rented(fake_store):
 def test_cannot_delete_vehicle_if_status_overdue(fake_store):
     from app.services.vehicle_service import VehicleService
     vid = put_vehicle(fake_store, vid=1, status="overdue")
-    ok, msg = VehicleService.delete_vehicle(vid)
+    ok, msg = VehicleService.delete_vehicle(vid, store=fake_store)
     assert not ok
     assert "overdue" in msg.lower()
 
@@ -72,7 +72,7 @@ def test_cannot_delete_vehicle_if_active_rentals_exist(fake_store):
     from app.services.vehicle_service import VehicleService
     vid = put_vehicle(fake_store, vid=1, status="available")
     put_rental(fake_store, rid=101, vehicle_id=vid, status="rented")
-    ok, msg = VehicleService.delete_vehicle(vid)
+    ok, msg = VehicleService.delete_vehicle(vid, store=fake_store)
     assert not ok
     assert "active" in msg.lower() or "rental" in msg.lower()
 
@@ -81,6 +81,6 @@ def test_can_delete_vehicle_if_only_returned_rentals(fake_store):
     from app.services.vehicle_service import VehicleService
     vid = put_vehicle(fake_store, vid=1, status="available")
     put_rental(fake_store, rid=201, vehicle_id=vid, status="returned")
-    ok, msg = VehicleService.delete_vehicle(vid)
+    ok, msg = VehicleService.delete_vehicle(vid, store=fake_store)
     assert ok, msg
     assert vid not in fake_store.vehicles

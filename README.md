@@ -73,10 +73,13 @@ vehicle_rental_web/
 │   │   └── exceptions.py     # Custom exception classes
 │   │
 │   └── tests/                # Unit & integration tests
-│       ├── test_integration_smoke.py
-│       ├── test_rent_availability.py
-│       ├── test_unit_auth.py
-│       └── test_unit_discounts.py
+│       ├── conftest.py
+│       ├── test_integration_access_control_min.py
+│       ├── test_integration_auth_flow.py
+│       ├── test_service_booking_conflict.py
+│       ├── test_service_vehicle_crud.py
+│	    ├── test_service_vehicle_delete_guards.py
+│	    └── test_service_vehicle_filter.py
 │
 ├── data.pkl                  # Local data persistence
 ├── requirements.txt          # Python dependencies
@@ -133,6 +136,97 @@ python run.py
 
 ---
 
+# 🧪 Tests
+
+This project uses **pytest** for unit and integration testing.
+All tests are located in the `tests/` directory and are designed to verify the correctness, reliability, and safety of
+both the **service layer** and **authentication logic**.
+
+## 📂 Test File Overview
+
+| File                                         | Purpose                                                                                                                                                               |
+|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **`conftest.py`**                            | Defines shared pytest fixtures, such as `fake_store`, which provides an in-memory store for isolated testing. This ensures tests do not modify real application data. |
+| **`test_integration_access_control_min.py`** | Minimal access control integration tests. Verifies that non-staff users cannot access staff-only routes (e.g., `/staff/vehicles`).                                    |
+| **`test_integration_auth_flow.py`**          | Tests the authentication flow: user registration, login, session handling, and logout. Ensures proper redirects and session persistence.                              |
+| **`test_service_booking_conflict.py`**       | Verifies booking conflict logic: prevents overlapping rentals for the same vehicle.                                                                                   |
+| **`test_service_vehicle_crud.py`**           | Tests vehicle creation, retrieval, update, and deletion at the service layer. Ensures that CRUD operations work as expected.                                          |
+| **`test_service_vehicle_delete_guards.py`**  | Checks deletion guards — vehicles in *rented* or *overdue* status, or referenced by active rentals, cannot be deleted.                                                |
+| **`test_service_vehicle_filter.py`**         | Tests vehicle filtering logic, including case-insensitive brand/model matching, type filtering, and numeric range filtering (with invalid input tolerance).           |
+
+---
+
+## 🎯 Testing Goals
+
+The goal of the test suite is to ensure:
+
+1. **Business rules are correctly enforced** (e.g., deletion and booking guards).
+2. **User flows work as expected** — login, logout, and access control.
+3. **Filtering and validation logic** handle both normal and invalid inputs gracefully.
+4. **Data integrity** is maintained (no cross-test interference, thanks to isolated `fake_store` fixtures).
+
+In short, the tests guarantee that the application’s backend behaves correctly, even under invalid or unexpected
+conditions.
+
+---
+
+## ▶️ How to Run the Tests
+
+1. **Create and activate a virtual environment:**
+
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate      # macOS/Linux
+   # .venv\Scripts\activate       # Windows
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+
+   (If no file exists, at least install pytest:)
+
+   ```bash
+   pip install pytest
+   ```
+
+3. **Run all tests:**
+
+   ```bash
+   pytest
+   ```
+
+4. **Run with verbose output:**
+
+   ```bash
+   pytest -v
+   ```
+
+5. **Run a single file or test:**
+
+   ```bash
+   pytest tests/test_service_vehicle_filter.py
+   pytest tests/test_service_vehicle_filter.py::test_filter_by_partial_brand -vv
+   ```
+
+6. **Generate a coverage report (optional):**
+
+   ```bash
+   pytest --cov=app --cov-report=term-missing
+   ```
+
+---
+
+## ✅ Expected Results
+
+* All tests should **pass without modifying any real data**.
+* The suite should complete quickly (<3 seconds) since all data lives in memory.
+* Failures (if any) will help identify missing validations or broken business logic.
+
+---
+
 ## 🧠 Tech Stack
 
 | Layer    | Technology                      |
@@ -144,7 +238,7 @@ python run.py
 
 ---
 
-## 📦 Key Business Logic
+## 📦 Key Logic
 
 * **Overdue detection** → automatically marks rentals as overdue if end date < today
 * **Access control** → decorators restrict staff-only actions

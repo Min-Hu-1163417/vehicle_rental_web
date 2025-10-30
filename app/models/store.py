@@ -105,6 +105,7 @@ class Store:
                 "model": data.get("model", ""),
                 "type": data.get("type", "car"),
                 "rate": float(data.get("rate") or 0),
+                "status": "available",
                 "image_path": data.get("image_path", "/static/images/placeholder.png"),
             }
             self.save()
