@@ -6,19 +6,35 @@
         They are provisioned out-of-band (seeded staff only). Use <code>staff/Staff123</code> after running <code>python
             seeds.py</code>.</p>
 
-    <form class="row g-2 mb-3" method="post" action="/staff/users/add">
-        <div class="col-md-3"><input class="form-control" name="username" placeholder="username" required/></div>
+    <form id="createUserForm" class="row g-2 mb-3" method="post" action="/staff/users/add">
         <div class="col-md-3">
-            <select class="form-select" name="role">
+            <input id="username" class="form-control" name="username" placeholder="username" required/>
+        </div>
+
+        <div class="col-md-3">
+            <select id="role" class="form-select" name="role" required>
+                <option value="">Select role</option>
                 <option value="individual">individual</option>
                 <option value="corporate">corporate</option>
             </select>
         </div>
-        <div class="col-md-3"><input class="form-control" name="password" placeholder="password" required/></div>
+
         <div class="col-md-3">
-            <button class="btn btn-primary w-100">Create</button>
+            <input
+                    id="password"
+                    class="form-control"
+                    name="password"
+                    placeholder="password (6+ chars, A-Z, a-z, 0-9)"
+                    required
+            />
+            <small id="pwHint" class="text-danger d-none">Invalid password format</small>
+        </div>
+
+        <div class="col-md-3">
+            <button id="createBtn" class="btn btn-primary w-100" type="submit" disabled>Create</button>
         </div>
     </form>
+
     <table class="table table-striped">
         <thead>
         <tr>
@@ -51,4 +67,41 @@
         {% endfor %}
         </tbody>
     </table>
+
+    <script>
+        (function () {
+            const username = document.getElementById("username");
+            const role = document.getElementById("role");
+            const password = document.getElementById("password");
+            const pwHint = document.getElementById("pwHint");
+            const createBtn = document.getElementById("createBtn");
+
+            // Regex: at least 6 chars, with uppercase, lowercase, and digit
+            const pwPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,}$/;
+
+            function isValidPassword(pw) {
+                return pwPattern.test(pw);
+            }
+
+            function checkForm() {
+                const validUsername = username.value.trim() !== "";
+                const validRole = role.value.trim() !== "";
+                const validPassword = isValidPassword(password.value.trim());
+
+                // Show/hide password hint
+                pwHint.classList.toggle("d-none", validPassword || password.value.trim() === "");
+
+                // Enable button only if all are valid
+                createBtn.disabled = !(validUsername && validRole && validPassword);
+            }
+
+            [username, role, password].forEach(el => {
+                el.addEventListener("input", checkForm);
+                el.addEventListener("change", checkForm);
+            });
+
+            // initialize
+            checkForm();
+        })();
+    </script>
 {% endblock %}

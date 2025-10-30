@@ -3,28 +3,35 @@
 <h3>Manage Vehicles</h3>
 
 <!-- Add vehicle form -->
-<form class="row g-2 mb-3" method="post" action="/staff/vehicles/add">
+<form id="addVehicleForm" class="row g-2 mb-3" method="post" action="/staff/vehicles/add">
     <div class="col-md-2">
-        <input class="form-control" name="brand" placeholder="brand" required>
+        <input id="brand" class="form-control" name="brand" placeholder="brand" required>
     </div>
+
     <div class="col-md-2">
-        <input class="form-control" name="model" placeholder="model" required>
+        <input id="model" class="form-control" name="model" placeholder="model" required>
     </div>
+
     <div class="col-md-2">
-        <select class="form-select" name="type" required>
+        <select id="type" class="form-select" name="type" required>
+            <option value="">Select type</option>
             <option value="car">car</option>
             <option value="motorbike">motorbike</option>
             <option value="truck">truck</option>
         </select>
     </div>
+
     <div class="col-md-2">
-        <input class="form-control" name="rate" type="number" step="5" min="0" placeholder="rate/day" required>
+        <input id="rate" class="form-control" name="rate" type="number" step="5" min="0"
+               placeholder="rate/day" required>
     </div>
+
     <div class="col-md-3">
-        <input class="form-control" name="image_path" placeholder="http/https or /static/...">
+        <input id="image_path" class="form-control" name="image_path" placeholder="http/https or /static/...">
     </div>
+
     <div class="col-md-1">
-        <button class="btn btn-primary w-100">Add</button>
+        <button id="addBtn" class="btn btn-primary w-100" type="submit" disabled>Add</button>
     </div>
 </form>
 
@@ -135,19 +142,30 @@
 
 <!-- JS -->
 <script>
-	function copyToClipboard(text, el) {
-		navigator.clipboard.writeText(text).then(() => {
-			const original = el.textContent;
-			el.style.color = "green";
-			el.textContent = "Copied!";
-			setTimeout(() => {
-				el.textContent = original;
-				el.style.color = "#000";
-			}, 1000);
-		}).catch(err => {
-			console.error('Copy failed', err);
-			alert("Failed to copy ID");
+	(function () {
+		const brand = document.getElementById("brand");
+		const model = document.getElementById("model");
+		const type = document.getElementById("type");
+		const rate = document.getElementById("rate");
+		const addBtn = document.getElementById("addBtn");
+
+		function checkForm() {
+			const validBrand = brand.value.trim() !== "";
+			const validModel = model.value.trim() !== "";
+			const validType = type.value.trim() !== "";
+			const validRate = rate.value.trim() !== "" && Number(rate.value) > 0;
+
+			// Enable Add button only if all required fields are valid
+			addBtn.disabled = !(validBrand && validModel && validType && validRate);
+		}
+
+		[brand, model, type, rate].forEach(el => {
+			el.addEventListener("input", checkForm);
+			el.addEventListener("change", checkForm);
 		});
-	}
+
+		// Initialize state
+		checkForm();
+	})();
 </script>
 {% endblock %}

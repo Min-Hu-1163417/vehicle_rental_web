@@ -1,0 +1,90 @@
+# =====================================
+# 🐍 Python / Flask common ignores
+# =====================================
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.cache/
+.mypy_cache/
+pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Flask instance folder (stores configs or uploads)
+instance/
+*.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*.pid
+
+# =====================================
+# 🌐 Project specific (vehicle_rental_web)
+# =====================================
+
+# User-uploaded vehicle images
+static/uploads/
+uploads/
+
+# Local configuration and secrets
+.env
+.env.local
+.env.*
+config.json
+secrets.json
+*.ini
+
+# Cache or generated files
+__cache__/
+tmp/
+*.cache
+
+# Build outputs
+dist/
+build/
+*.map
+
+# =====================================
+# 🧠 Editor / system files
+# =====================================
+
+# IDE settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# =====================================
+# ⚙️ Optional: large or temporary data
+# =====================================
+
+# Data exports, backups, models, archives
+*.csv
+*.xlsx
+*.zip
+*.tar
+*.gz
+*.tflite
+*.h5

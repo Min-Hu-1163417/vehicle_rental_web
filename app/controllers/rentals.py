@@ -91,7 +91,7 @@ def return_submit():
     rid = (request.form.get("rental_id") or "").strip()
     if not rid:
         flash("Missing rental id", "danger")
-        # 回到当前用户的仪表盘
+        # Return to the corresponding dashboard of the current user
         role = session.get("role")
         dest = {
             "staff": "views.staff_dashboard",
@@ -103,7 +103,7 @@ def return_submit():
     ok, msg = RentalService.return_vehicle(rid)
     flash(msg, "success" if ok else "danger")
 
-    # 按用户角色回到对应仪表盘（你的项目已有这些路由）
+    # Return to the corresponding dashboard of the current user
     role = session.get("role")
     dest = {
         "staff": "views.staff_dashboard",

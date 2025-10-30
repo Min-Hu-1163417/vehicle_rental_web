@@ -41,7 +41,7 @@
         <a id="resetBtn"
            class="btn btn-outline-secondary me-2 {{ '' if has_filters else 'd-none' }}"
            href="{{ request.path }}">Reset</a>
-        <button class="btn btn-primary w-100">Filter</button>
+        <button id="filterBtn" class="btn btn-primary w-100" type="submit" disabled>Filter</button>
     </div>
 </form>
 
@@ -99,18 +99,29 @@
 	(function () {
 		const fields = ["brand", "type", "min", "max"].map(id => document.getElementById(id));
 		const resetBtn = document.getElementById("resetBtn");
+		const filterBtn = document.getElementById("filterBtn");
 
 		function hasAny() {
 			return fields.some(el => el && (el.value || "").trim() !== "");
 		}
 
 		function sync() {
-			if (!resetBtn) return;
-			if (hasAny()) resetBtn.classList.remove("d-none");
-			else resetBtn.classList.add("d-none");
+			const any = hasAny();
+			if (resetBtn) {
+				resetBtn.classList.toggle("d-none", !any);
+			}
+			if (filterBtn) {
+				filterBtn.disabled = !any;
+			}
 		}
 
-		fields.forEach(el => el && (el.addEventListener("input", sync), el.addEventListener("change", sync)));
+		fields.forEach(el => {
+			if (!el) return;
+			el.addEventListener("input", sync);
+			el.addEventListener("change", sync);
+		});
+
+		// Run once on load
 		sync();
 	})();
 </script>

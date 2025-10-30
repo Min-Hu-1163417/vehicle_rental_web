@@ -155,10 +155,11 @@ python run.py
 
 ## 🧑‍💻 Author
 
-**Vincent Hu**
-Master of Applied Computing, Lincoln University
-📍 Christchurch, New Zealand
-📧 [vincent.hu@outlook.co.nz](mailto:vincent.hu@outlook.co.nz)
+**Vincent Hu, 1163417**<br>
+
+🏫 Master of Applied Computing, Lincoln University<br>
+📍 Christchurch, New Zealand<br>
+📧 [vincent.hu@lincolnuni.ac.nz](mailto:vincent.hu@lincolnuni.ac.nz)<br>
 🌐 [GitHub Profile](https://github.com/Min-Hu-1163417/vehicle_rental_web.git)
 
 ---
