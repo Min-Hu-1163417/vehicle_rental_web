@@ -25,7 +25,11 @@
                 <td>
                     {{ r.created_at | fmt_iso_local }}
                 </td>
-                <td>{{ r.brand }} {{ r.model }}</td>
+                <td>
+                    <a href="/vehicles/{{ r.vehicle_id }}" class="text-decoration-none text-dark">
+                        {{ r.brand }} {{ r.model }}
+                    </a>
+                </td>
                 <td>{{ r.type }}</td>
                 <td>{{ r.start_date | fmt_iso_local }} → {{ r.end_date | fmt_iso_local }}</td>
                 <td class="text-end">{{ r.days }}</td>

@@ -18,7 +18,7 @@
         </select>
     </div>
     <div class="col-md-2">
-        <input class="form-control" name="rate" placeholder="rate/day" required>
+        <input class="form-control" name="rate" type="number" step="5" min="0" placeholder="rate/day" required>
     </div>
     <div class="col-md-3">
         <input class="form-control" name="image_path" placeholder="http/https or /static/...">
@@ -33,13 +33,13 @@
 <table class="table table-striped align-middle">
     <thead class="table-light">
     <tr>
+        <th></th>
         <th>ID</th>
         <th>Brand</th>
         <th>Model</th>
         <th>Type</th>
         <th>Rate/day</th>
         <th>Status</th>
-        <th>Detail</th>
         <th></th>
     </tr>
     </thead>
@@ -47,6 +47,18 @@
     {% for v in vehicles %}
     {% set status = v.status | default('available', true) %}
     <tr>
+        <td>
+            <a href="/vehicles/{{ v.vehicle_id }}">
+                <img
+                        src="{{ v.image_path or url_for('static', filename='images/placeholder-vehicle.svg') }}"
+                        referrerpolicy="no-referrer"
+                        alt="thumbnail"
+                        style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 8px;"
+                        onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-vehicle.svg') }}';"
+                >
+            </a>
+        </td>
+
         <td>
             <span class="vehicle-id" onclick="copyToClipboard('{{ v.vehicle_id }}', this)">
                 {{ v.vehicle_id }}
@@ -56,25 +68,24 @@
         <td>{{ v.model }}</td>
         <td>{{ v.type }}</td>
         <td>${{ '%.2f'|format(v.rate) }}</td>
+
         <td>
-            <span class="badge
-                {% if status == 'rented' %} bg-primary
-                {% elif status == 'overdue' %} bg-danger
-                {% elif status in ['returned', 'available'] %} bg-success
-                {% elif status == 'cancelled' %} bg-secondary
-                {% else %} bg-light text-dark
-                {% endif %}">
-                {{ status }}
-            </span>
+        <span class="badge
+            {% if status == 'rented' %} bg-primary
+            {% elif status == 'overdue' %} bg-danger
+            {% elif status in ['returned', 'available'] %} bg-success
+            {% elif status == 'cancelled' %} bg-secondary
+            {% else %} bg-light text-dark
+            {% endif %}">
+            {{ status }}
+        </span>
             {% if status == 'overdue' and v.overdue_days %}
             <small class="text-danger ms-1">
                 ({{ v.overdue_days }} day{{ 's' if v.overdue_days|int != 1 }})
             </small>
             {% endif %}
         </td>
-        <td>
-            <a class="btn btn-sm btn-outline-secondary" href="/vehicles/{{ v.vehicle_id }}">View</a>
-        </td>
+
         <td>
             <form method="post" action="/staff/vehicles/delete" onsubmit="return confirm('Delete this vehicle?');">
                 <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}">
@@ -84,6 +95,7 @@
     </tr>
     {% endfor %}
     </tbody>
+
 </table>
 
 {% else %}
