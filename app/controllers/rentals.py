@@ -4,6 +4,7 @@ from ..exceptions import VehicleNotFoundError, RentalNotFoundError
 from ..services.rental_service import RentalService
 from ..services.vehicle_service import VehicleService
 from ..utils.decorators import login_required
+from app.services.common import Store  # <-- make sure this import path is correct
 
 bp = Blueprint("rentals", __name__, url_prefix="/")
 
@@ -31,12 +32,58 @@ def list_vehicles():
 @bp.get("/vehicles/<vid>")
 @login_required
 def vehicle_detail(vid):
-    """Vehicle detail page, show booked ranges so UI can avoid conflicts."""
+    """
+    Vehicle detail page.
+    - Staff users see all booked periods plus who rented them.
+    - Non-staff users see only their own bookings.
+    """
+    # 1) Load the vehicle
     v = VehicleService.get_vehicle(vid)
     if not v:
-        flash("Vehicle not found")
+        flash("Vehicle not found", "danger")
         return redirect(url_for("rentals.list_vehicles"))
-    calendar = VehicleService.availability_calendar(vid)
+
+    # 2) Who is the current user?
+    is_staff = session.get("role") == "staff"
+    me_id = session.get("renter_id") or session.get("user_id")
+
+    # 3) Access the shared store
+    store = Store.instance()
+
+    # 4) Collect rentals for this vehicle (adjust statuses if needed)
+    rentals = []
+    for r in store.rentals.values():
+        if r.get("vehicle_id") != vid:
+            continue
+        if r.get("status") not in ("rented", "reserved", "overdue", "returned"):
+            continue
+        rentals.append(r)
+
+    # 5) Enrich with renter username
+    calendar = []
+    for r in sorted(rentals, key=lambda x: (x.get("start_date") or "")):
+        rid = r.get("renter_id")
+        rname = r.get("renter_username")
+        if not rname and rid in store.users:
+            rname = store.users[rid].get("username")
+
+        item = {
+            "start": (r.get("start_date") or "")[:10],
+            "end": (r.get("end_date") or "")[:10],
+            "renter_id": rid,
+            "renter_username": rname,
+        }
+
+        # Staff see all; non-staff see only their own
+        if is_staff or (me_id and rid == me_id):
+            calendar.append(item)
+
+    # 6) Fallback to service calendar if nothing enriched (keeps JS blocking working)
+    if not calendar:
+        simple = VehicleService.availability_calendar(vid) or []
+        calendar = [{"start": s[:10], "end": e[:10], "renter_id": None, "renter_username": None}
+                    for (s, e) in simple]
+
     return render_template("vehicles/vehicle_detail.html", v=v, calendar=calendar)
 
 

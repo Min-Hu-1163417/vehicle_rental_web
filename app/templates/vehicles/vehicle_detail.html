@@ -5,11 +5,13 @@
     <p>Type: {{ v.type }} | Rate: ${{ '%.2f'|format(v.rate) }}/day</p>
     <img src="{{ v.image_path }}" class="img-fluid mb-3" style="max-height:240px;object-fit:cover"/>
 
-    <!-- Normalize status and overdue days for consistent logic -->
+    <!-- Normalized helpers -->
     {% set status = (v.status|string)|lower|trim %}
     {% set overdue_days = (v.overdue_days|default(0))|int %}
+    {% set is_staff = session.get('role') == 'staff' %}
+    {% set me_id = session.get('renter_id') or session.get('user_id') %}
 
-    <!-- Section heading: show "Booked Periods" or "No existing bookings" -->
+    <!-- Section heading -->
     <h5>
         {% if calendar and calendar|length > 0 %}
             Booked Periods:
@@ -18,27 +20,44 @@
         {% endif %}
     </h5>
 
-    <!-- Display booked date ranges if any exist -->
+    <!-- Booked periods list -->
     {% if calendar and calendar|length > 0 %}
         <ul class="list-unstyled">
-            {% for s, e in calendar %}
-                <li>{{ s | fmt_iso_local }} → {{ e | fmt_iso_local }}</li>
+            {# Allow both shapes:
+               1) [start, end]
+               2) {start, end, renter_id, renter_username}
+            #}
+            {% for it in calendar %}
+                {% set s = (it.start if it.start is defined else (it['start'] if 'start' in it else (it[0] if it[0] is defined else None))) %}
+                {% set e = (it.end   if it.end   is defined else (it['end']   if 'end'   in it else (it[1] if it[1] is defined else None))) %}
+                {% set rid = (it.renter_id if it.renter_id is defined else (it['renter_id'] if 'renter_id' in it else None)) %}
+                {% set rname = (it.renter_username if it.renter_username is defined else (it['renter_username'] if 'renter_username' in it else None)) %}
+
+                {# Staff: show all bookings with renter info. Non-staff: show only own bookings. #}
+                {% if is_staff or (me_id and rid and rid == me_id) or (rid is none and not is_staff) %}
+                    <li>
+                        {{ s | fmt_iso_local }} → {{ e | fmt_iso_local }}
+                        {% if is_staff and rid %}
+                            <span class="text-muted"> — Rented by: {{ rname or 'user' }} ({{ rid }})</span>
+                        {% endif %}
+                    </li>
+                {% endif %}
             {% endfor %}
         </ul>
     {% endif %}
 
-    <!-- Priority message: show overdue warning first, otherwise normal unavailable notice -->
+    <!-- Priority message -->
     {% if status == 'overdue' %}
         <p class="text-danger small">
             ⚠️ This vehicle is <strong>overdue</strong>. It cannot be rented until returned.
         </p>
     {% elif calendar and calendar|length > 0 %}
-        <p class="text-danger small">⚠️The above periods are unavailable for rental.</p>
+        <p class="text-danger small">⚠️ The above periods are unavailable for rental.</p>
     {% endif %}
 
     {% if status != 'overdue' %}
         <!-- Rental form (hidden for staff users) -->
-        {% if session.get('role') != 'staff' %}
+        {% if not is_staff %}
             <hr/>
             <form method="post" action="/rent" class="row g-2 justify-content-center">
                 <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}"/>
@@ -60,98 +79,83 @@
         {% endif %}
     {% endif %}
 
-    <!-- JavaScript logic for preventing rental overlaps and auto-adjusting date pickers -->
+    <!-- JS: prevent overlaps & auto-adjust date pickers -->
     <script>
-		// Booked ranges sent from the server, e.g. [["2025-10-22","2025-10-23"], ...]
-		const booked = {{ calendar|tojson }};
+        // 'calendar' may be:
+        // 1) [["2025-10-22","2025-10-23"], ...]
+        // 2) [{start:"2025-10-22", end:"2025-10-23", renter_id:"...", renter_username:"..."}, ...]
+        const calendarRaw = {{ (calendar or []) | tojson }};
 
-		const startEl = document.getElementById('start_date');
-		const endEl = document.getElementById('end_date');
+        // Normalize to pairs [start, end] for the date-blocking logic
+        const booked = (calendarRaw || []).map(it => Array.isArray(it) ? [it[0], it[1]] : [it.start, it.end]);
 
-		// --- Utility functions for date handling ---
-		const z = n => String(n).padStart(2, '0');
-		const toYMD = d => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
-		const parseYMD = s => {
-			const [y, m, d] = s.split('-').map(Number);
-			return new Date(y, m - 1, d);
-		};
+        const startEl = document.getElementById('start_date');
+        const endEl = document.getElementById('end_date');
 
-		// Convert booked date ranges to Date objects, representing half-open intervals [start, end)
-		const blocks = (booked || [])
-			.map(([s, e]) => [parseYMD(s), parseYMD(e)])
-			.sort((a, b) => a[0] - b[0]);
+        // Utilities
+        const z = n => String(n).padStart(2, '0');
+        const toYMD = d => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+        const parseYMD = s => { const [y,m,d] = (s || '').split('-').map(Number); return new Date(y, m - 1, d); };
 
-		// Check if a given date falls inside any booked block
-		function insideAnyBlock(d) {
-			for (const [bs, be] of blocks) {
-				if (d >= bs && d < be) return [bs, be];
-			}
-			return null;
-		}
+        // Build half-open intervals [start, end)
+        const blocks = (booked || [])
+            .filter(pair => pair && pair[0] && pair[1])
+            .map(([s, e]) => [parseYMD(s), parseYMD(e)])
+            .sort((a, b) => a[0] - b[0]);
 
-		// Move 'd' forward until it's not inside any booked block
-		function nextFreeDay(d) {
-			let cur = new Date(d);
-			while (true) {
-				const hit = insideAnyBlock(cur);
-				if (!hit) return cur;
-				cur = new Date(hit[1]); // skip to end of booked block
-			}
-		}
+        function insideAnyBlock(d) {
+            for (const [bs, be] of blocks) if (d >= bs && d < be) return [bs, be];
+            return null;
+        }
+        function nextFreeDay(d) {
+            let cur = new Date(d);
+            while (true) {
+                const hit = insideAnyBlock(cur);
+                if (!hit) return cur;
+                cur = new Date(hit[1]); // skip to the end of the booked block
+            }
+        }
+        function capEndByNextBlock(s, e) {
+            let capped = new Date(e);
+            for (const [bs] of blocks) { if (bs > s && bs < capped) { capped = new Date(bs); break; } }
+            return capped;
+        }
 
-		// Cap end date to just before the next booked period after 's'
-		function capEndByNextBlock(s, e) {
-			let capped = new Date(e);
-			for (const [bs] of blocks) {
-				if (bs > s && bs < capped) {
-					capped = new Date(bs);
-					break;
-				}
-			}
-			return capped;
-		}
+        // Initialize default values only if the form exists (hidden for staff)
+        if (startEl && endEl) {
+            const today = new Date(); today.setHours(0,0,0,0);
 
-		// Initialize today's date (midnight)
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
+            let initStart = nextFreeDay(today);
+            let initEnd = new Date(initStart); initEnd.setDate(initEnd.getDate() + 1);
+            initEnd = capEndByNextBlock(initStart, initEnd);
+            if (initEnd <= initStart) { initEnd = new Date(initStart); initEnd.setDate(initEnd.getDate() + 1); }
 
-		// Initialize form defaults: start = first free day, end = +1 day
-		let initStart = nextFreeDay(today);
-		let initEnd = new Date(initStart);
-		initEnd.setDate(initEnd.getDate() + 1);
-		initEnd = capEndByNextBlock(initStart, initEnd);
-		if (initEnd <= initStart) {
-			initEnd = new Date(initStart);
-			initEnd.setDate(initEnd.getDate() + 1);
-		}
+            startEl.min = toYMD(today);
+            startEl.value = toYMD(initStart);
+            const minEnd = new Date(initStart); minEnd.setDate(minEnd.getDate() + 1);
+            endEl.min = toYMD(minEnd);
+            endEl.value = toYMD(initEnd);
 
-		// Assign initial datepicker values and constraints
-		startEl.min = toYMD(today);
-		startEl.value = toYMD(initStart);
-		endEl.min = toYMD(new Date(initStart.getFullYear(), initStart.getMonth(), initStart.getDate() + 1));
-		endEl.value = toYMD(initEnd);
+            function sync() {
+                let s = parseYMD(startEl.value);
+                let e = parseYMD(endEl.value);
+                if (isNaN(s) || s < today) s = new Date(today);
+                s = nextFreeDay(s);
 
-		// Sync logic: when user changes start or end date, validate and auto-correct
-		function sync() {
-			let s = parseYMD(startEl.value);
-			let e = parseYMD(endEl.value);
-			if (isNaN(s) || s < today) s = new Date(today);
-			s = nextFreeDay(s);
+                const minEnd = new Date(s); minEnd.setDate(minEnd.getDate() + 1);
+                if (isNaN(e) || e <= s) e = new Date(minEnd);
 
-			const minEnd = new Date(s);
-			minEnd.setDate(minEnd.getDate() + 1);
-			if (isNaN(e) || e <= s) e = new Date(minEnd);
+                e = capEndByNextBlock(s, e);
+                if (e <= s) e = new Date(minEnd);
 
-			e = capEndByNextBlock(s, e);
-			if (e <= s) e = new Date(minEnd);
+                startEl.value = toYMD(s);
+                startEl.min = toYMD(today);
+                endEl.min = toYMD(minEnd);
+                endEl.value = toYMD(e);
+            }
 
-			startEl.value = toYMD(s);
-			startEl.min = toYMD(today);
-			endEl.min = toYMD(minEnd);
-			endEl.value = toYMD(e);
-		}
-
-		startEl.addEventListener('change', sync);
-		endEl.addEventListener('change', sync);
+            startEl.addEventListener('change', sync);
+            endEl.addEventListener('change', sync);
+        }
     </script>
 {% endblock %}

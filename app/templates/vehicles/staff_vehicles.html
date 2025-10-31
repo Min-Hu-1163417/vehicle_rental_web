@@ -22,7 +22,7 @@
     </div>
 
     <div class="col-md-2">
-        <input id="rate" class="form-control" name="rate" type="number" step="5" min="0"
+        <input id="rate" class="form-control" name="rate" type="number" step="1" min="0"
                placeholder="rate/day" required>
     </div>
 
@@ -47,7 +47,7 @@
         <th>Type</th>
         <th>Rate/day</th>
         <th>Status</th>
-        <th></th>
+        <th class="text-end">Actions</th>
     </tr>
     </thead>
     <tbody>
@@ -86,15 +86,17 @@
             {% endif %}">
             {{ status }}
         </span>
-            {% if status == 'overdue' and v.overdue_days %}
-            <small class="text-danger ms-1">
-                ({{ v.overdue_days }} day{{ 's' if v.overdue_days|int != 1 }})
-            </small>
-            {% endif %}
         </td>
 
-        <td>
-            <form method="post" action="/staff/vehicles/delete" onsubmit="return confirm('Delete this vehicle?');">
+        <td class="text-end">
+            <!-- ✅ Edit button -->
+            <button class="btn btn-sm btn-outline-secondary me-1"
+                    onclick="openEditModal('{{ v.vehicle_id }}', '{{ v.brand }}', '{{ v.model }}', '{{ v.type }}', '{{ v.rate }}', '{{ v.image_path }}')">
+                Edit
+            </button>
+
+            <form method="post" action="/staff/vehicles/delete" class="d-inline"
+                  onsubmit="return confirm('Delete this vehicle?');">
                 <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}">
                 <button class="btn btn-sm btn-outline-danger">Delete</button>
             </form>
@@ -102,7 +104,6 @@
     </tr>
     {% endfor %}
     </tbody>
-
 </table>
 
 {% else %}
@@ -126,8 +127,64 @@
 </div>
 {% endif %}
 
+<!-- ✅ Edit Vehicle Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editForm" method="post" action="/staff/vehicles/edit">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Vehicle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="vehicle_id" id="editVehicleId">
+
+                    <div class="mb-3">
+                        <label class="form-label">Brand</label>
+                        <input type="text" class="form-control" id="editBrand" name="brand" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Model</label>
+                        <input type="text" class="form-control" id="editModel" name="model" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="editType" name="type" required>
+                            <option value="car">car</option>
+                            <option value="motorbike">motorbike</option>
+                            <option value="truck">truck</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rate/day</label>
+                        <input type="number" class="form-control" id="editRate" name="rate" min="0" step="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Image URL</label>
+                        <input type="text" class="form-control" id="editImagePath" name="image_path">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Styles -->
 <style>
+    a img {
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    a img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 6px rgba(13, 110, 253, 0.4);
+    }
+
     .vehicle-id {
         cursor: pointer;
         color: #000;
@@ -142,6 +199,35 @@
 
 <!-- JS -->
 <script>
+	function copyToClipboard(text, el) {
+		const ta = document.createElement("textarea");
+		ta.value = text;
+		document.body.appendChild(ta);
+		ta.select();
+		document.execCommand("copy");
+		document.body.removeChild(ta);
+
+		const original = el.textContent;
+		el.textContent = "Copied!";
+		el.style.color = "#198754";
+		setTimeout(() => {
+			el.textContent = original;
+			el.style.color = "";
+		}, 1200);
+	}
+
+	window.openEditModal = function (id, brand, model, type, rate, imagePath) {
+		document.getElementById("editVehicleId").value = id;
+		document.getElementById("editBrand").value = brand;
+		document.getElementById("editModel").value = model;
+		document.getElementById("editType").value = type;
+		document.getElementById("editRate").value = rate;
+		document.getElementById("editImagePath").value = imagePath;
+
+		const modal = new bootstrap.Modal(document.getElementById("editModal"));
+		modal.show();
+	};
+
 	(function () {
 		const brand = document.getElementById("brand");
 		const model = document.getElementById("model");
@@ -154,8 +240,6 @@
 			const validModel = model.value.trim() !== "";
 			const validType = type.value.trim() !== "";
 			const validRate = rate.value.trim() !== "" && Number(rate.value) > 0;
-
-			// Enable Add button only if all required fields are valid
 			addBtn.disabled = !(validBrand && validModel && validType && validRate);
 		}
 
@@ -163,8 +247,6 @@
 			el.addEventListener("input", checkForm);
 			el.addEventListener("change", checkForm);
 		});
-
-		// Initialize state
 		checkForm();
 	})();
 </script>

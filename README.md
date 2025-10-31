@@ -144,15 +144,16 @@ both the **service layer** and **authentication logic**.
 
 ## 📂 Test File Overview
 
-| File                                         | Purpose                                                                                                                                                               |
-|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **`conftest.py`**                            | Defines shared pytest fixtures, such as `fake_store`, which provides an in-memory store for isolated testing. This ensures tests do not modify real application data. |
-| **`test_integration_access_control_min.py`** | Minimal access control integration tests. Verifies that non-staff users cannot access staff-only routes (e.g., `/staff/vehicles`).                                    |
-| **`test_integration_auth_flow.py`**          | Tests the authentication flow: user registration, login, session handling, and logout. Ensures proper redirects and session persistence.                              |
-| **`test_service_booking_conflict.py`**       | Verifies booking conflict logic: prevents overlapping rentals for the same vehicle.                                                                                   |
-| **`test_service_vehicle_crud.py`**           | Tests vehicle creation, retrieval, update, and deletion at the service layer. Ensures that CRUD operations work as expected.                                          |
-| **`test_service_vehicle_delete_guards.py`**  | Checks deletion guards — vehicles in *rented* or *overdue* status, or referenced by active rentals, cannot be deleted.                                                |
-| **`test_service_vehicle_filter.py`**         | Tests vehicle filtering logic, including case-insensitive brand/model matching, type filtering, and numeric range filtering (with invalid input tolerance).           |
+| File                                         | Purpose                                                                                                                                                                                                                                 |
+|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **`conftest.py`**                            | Defines shared pytest fixtures, such as `fake_store`, which provides an in-memory store for isolated testing. This ensures tests do not modify real application data.                                                                   |
+| **`test_integration_access_control_min.py`** | Minimal access control integration tests. Verifies that non-staff users cannot access staff-only routes (e.g., `/staff/vehicles`).                                                                                                      |
+| **`test_integration_auth_flow.py`**          | Tests the authentication flow: user registration, login, session handling, and logout. Ensures proper redirects and session persistence.                                                                                                |
+| **`test_service_booking_conflict.py`**       | Verifies booking conflict logic: prevents overlapping rentals for the same vehicle.                                                                                                                                                     |
+| **`test_service_vehicle_crud.py`**           | Tests vehicle creation, retrieval, update, and deletion at the service layer. Ensures that CRUD operations work as expected.                                                                                                            |
+| **`test_service_vehicle_delete_guards.py`**  | Checks deletion guards — vehicles in *rented* or *overdue* status, or referenced by active rentals, cannot be deleted.                                                                                                                  |
+| **`test_service_vehicle_filter.py`**         | Tests vehicle filtering logic, including case-insensitive brand/model matching, type filtering, and numeric range filtering (with invalid input tolerance).                                                                             |
+| **`test_integration_rental_flow.py`**        | Integration test: verifies the full rental workflow—user registration/login, vehicle seeding, rental creation; asserts allowed actions by date (cancel/return); checks state transitions, pricing, discounts, and key guard conditions. |
 
 ---
 

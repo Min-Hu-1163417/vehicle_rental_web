@@ -11,6 +11,7 @@ from ..services.common import _store
 from ..services.user_service import UserService
 from ..services.vehicle_service import VehicleService
 from ..utils.decorators import login_required, role_required
+from app.services.common import _store
 
 bp = Blueprint("staff", __name__, url_prefix="/staff")
 
@@ -114,3 +115,46 @@ def staff_analytics():
     """Staff dashboards: system analytics summary."""
     data = AnalyticsService.analytics()
     return render_template("users/staff_analytics.html", data=data)
+
+
+@bp.post("/vehicles/edit")
+def staff_update_vehicle():
+    vid = request.form["vehicle_id"]
+    data = {
+        "brand": request.form["brand"],
+        "model": request.form["model"],
+        "type": request.form["type"],
+        "rate": float(request.form["rate"]),
+        "image_path": request.form.get("image_path", ""),
+    }
+    ok, msg = VehicleService.staff_update_vehicle(vid, data)
+    flash(msg, "success" if ok else "danger")
+    return redirect(url_for("staff.staff_vehicles"))
+
+
+@bp.get("/rentals", endpoint="staff_rentals")
+@login_required
+def staff_rentals():
+    store = _store()
+
+    rentals = []
+    for r in store.rentals.values():
+        rid = r.get("renter_id")
+        uname = r.get("renter_username") or (store.users.get(str(rid), {}) or {}).get("username")
+        veh = store.vehicles.get(r.get("vehicle_id"), {}) or {}
+        rentals.append({
+            "rental_id": r.get("rental_id"),
+            "vehicle_id": r.get("vehicle_id"),
+            "brand": veh.get("brand"),
+            "model": veh.get("model"),
+            "renter_id": str(rid) if rid is not None else None,
+            "username": uname,
+            "start_date": r.get("start_date"),
+            "end_date": r.get("end_date"),
+            "days": r.get("days") or r.get("n_days") or 0,
+            "total": r.get("total"),
+            "status": r.get("status"),
+        })
+
+    rentals.sort(key=lambda x: (x.get("start_date") or ""), reverse=True)
+    return render_template("users/staff_rentals.html", rentals=rentals)

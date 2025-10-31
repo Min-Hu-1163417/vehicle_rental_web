@@ -215,3 +215,46 @@ class VehicleService:
                     if vid in store.vehicles:
                         store.vehicles[vid]["status"] = VehicleStatus.OVERDUE
         store.save()
+
+    @classmethod
+    def staff_update_vehicle(cls, vehicle_id: str, data: dict, store=None):
+        """
+        Update an existing vehicle record (brand, model, type, rate, image_path, status).
+        Called from the staff dashboard edit modal.
+
+        Args:
+            vehicle_id (str): Vehicle UUID.
+            data (dict): Fields to update.
+            store: Optional Store instance; if None, use the default singleton.
+
+        Returns:
+            (bool, str): (success, message)
+        """
+        store = store or cls._get_store()
+        v = store.vehicles.get(str(vehicle_id))
+        if not v:
+            return False, f"Vehicle {vehicle_id} not found."
+
+        # Define allowed fields
+        allowed = {"brand", "model", "type", "rate", "image_path", "status"}
+
+        for k, val in data.items():
+            if k in allowed:
+                # Convert numeric rate safely
+                if k == "rate":
+                    try:
+                        val = float(val)
+                    except ValueError:
+                        return False, "Invalid rate value."
+
+                # 🧩 Handle empty image_path: restore to default placeholder
+                if k == "image_path":
+                    val = val.strip() if val else ""
+                    if not val:
+                        val = "/static/images/placeholder.png"
+
+                v[k] = val
+
+        # Persist changes
+        store.save()
+        return True, f"Vehicle '{v.get('brand', '')} {v.get('model', '')}' updated successfully."

@@ -9,6 +9,19 @@ from app import create_app
 
 
 @pytest.fixture(autouse=True)
+def reset_store_between_tests():
+    try:
+        from app.services.common import _store
+        st = _store()
+        if hasattr(st, "users"):    st.users.clear()
+        if hasattr(st, "vehicles"): st.vehicles.clear()
+        if hasattr(st, "rentals"):  st.rentals.clear()
+    except Exception:
+        pass
+    yield
+
+
+@pytest.fixture(autouse=True)
 def unified_store(monkeypatch):
     """
     Provide a single in-memory store and patch _store() in common + each service

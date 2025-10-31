@@ -1,0 +1,153 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+  <h3 class="mb-3">Rental Records</h3>
+  <p class="text-muted small">
+    View and manage all rental records. Results update automatically as you type or filter.
+  </p>
+
+  <!-- Filters -->
+  <form id="filterForm" class="row g-2 align-items-end mb-3">
+    <div class="col-md-3">
+      <label class="form-label">Keyword</label>
+      <input type="text" class="form-control" id="q"
+             placeholder="username / vehicle / rental id">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select class="form-select" id="status">
+        <option value="">All</option>
+        <option value="rented">rented</option>
+        <option value="available">available</option>
+        <option value="overdue">overdue</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Start (from)</label>
+      <input type="date" class="form-control" id="from">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">End (to)</label>
+      <input type="date" class="form-control" id="to">
+    </div>
+    <div class="col-md-3 d-flex">
+      <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('staff.staff_rentals') }}">Reset</a>
+    </div>
+  </form>
+
+  {% if rentals and rentals|length > 0 %}
+  <div id="tableWrapper" class="table-responsive">
+    <table class="table table-striped align-middle" id="rentalsTable">
+      <thead>
+        <tr>
+          <th>Rental ID</th>
+          <th>Vehicle</th>
+          <th>Renter</th>
+          <th>Period</th>
+          <th class="text-end">Days</th>
+          <th class="text-end">Total</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rentals %}
+        <tr data-q="{{ (r.username ~ ' ' ~ r.brand ~ ' ' ~ r.model ~ ' ' ~ r.rental_id)|lower }}"
+            data-status="{{ r.status|lower }}"
+            data-start="{{ r.start_date }}"
+            data-end="{{ r.end_date }}">
+          <td>{{ r.rental_id }}</td>
+          <td>
+            <a href="#" class="text-decoration-underline text-dark">
+              {{ r.brand }} {{ r.model }}
+            </a>
+          </td>
+          <td>
+            <div>{{ r.username }}</div>
+            <div class="text-muted small">{{ r.renter_id }}</div>
+          </td>
+          <td>{{ r.start_date | fmt_iso_local }} → {{ r.end_date | fmt_iso_local }}</td>
+          <td class="text-end">{{ r.days }}</td>
+          <td class="text-end">${{ '%.2f'|format(r.total or 0) }}</td>
+          <td>
+            {% set st = (r.status|string)|lower %}
+            <span class="badge
+              {% if st=='rented' %} bg-primary
+              {% elif st=='available' %} bg-success
+              {% elif st=='overdue' %} bg-danger
+              {% else %} bg-light text-dark {% endif %}">
+              {{ st }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty state (hidden initially) -->
+  <div id="emptyState" class="text-center my-5" style="display:none;">
+    <div class="card shadow-sm border-0 mx-auto p-5" style="max-width: 480px;">
+      <div class="display-4 mb-3">🚗</div>
+      <h4 class="mb-2">No rentals found</h4>
+      <p class="text-muted mb-3">Try adjusting your filters to see more results.</p>
+      <a href="{{ url_for('staff.staff_rentals') }}" class="btn btn-outline-primary">Reset filters</a>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const q = document.getElementById('q');
+      const status = document.getElementById('status');
+      const from = document.getElementById('from');
+      const to = document.getElementById('to');
+      const rows = Array.from(document.querySelectorAll('#rentalsTable tbody tr'));
+      const emptyState = document.getElementById('emptyState');
+      const tableWrapper = document.getElementById('tableWrapper');
+
+      function inRange(dateStr, fromStr, toStr) {
+        if (!dateStr) return true;
+        const d = new Date(dateStr);
+        if (fromStr && d < new Date(fromStr)) return false;
+        if (toStr && d > new Date(toStr + "T23:59:59")) return false;
+        return true;
+      }
+
+      function applyFilter() {
+        const qv = q.value.toLowerCase().trim();
+        const sv = status.value.toLowerCase().trim();
+        const fv = from.value;
+        const tv = to.value;
+        let visible = 0;
+
+        rows.forEach(tr => {
+          const text = tr.dataset.q || '';
+          const st = tr.dataset.status || '';
+          const start = tr.dataset.start || '';
+          const end = tr.dataset.end || '';
+
+          const match = (!qv || text.includes(qv))
+            && (!sv || st === sv)
+            && ((!fv && !tv) || inRange(start, fv, tv) || inRange(end, fv, tv));
+
+          tr.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+
+        tableWrapper.style.display = visible ? '' : 'none';
+        emptyState.style.display = visible ? 'none' : '';
+      }
+
+      [q, status, from, to].forEach(el => el.addEventListener('input', applyFilter));
+      applyFilter();
+    })();
+  </script>
+  {% else %}
+  <div class="text-center my-5">
+    <div class="card shadow-sm border-0 mx-auto p-5" style="max-width:480px;">
+      <div class="display-4 mb-3">🚗</div>
+      <h4 class="mb-2">No rentals available</h4>
+      <p class="text-muted mb-3">There are currently no rental records.</p>
+      <a href="{{ url_for('staff.staff_vehicles') }}" class="btn btn-outline-secondary">View Vehicles</a>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
